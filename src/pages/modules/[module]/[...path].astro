@@ -79,9 +79,6 @@ if (declData.members && declData.members.length > 0) {
 const fqnParts = declData.fqn.split('.');
 const breadcrumbs = fqnParts.map((part: any, index: number) => {
     const currentPath = fqnParts.slice(0, index + 1).join('/');
-    console.log(part)
-    console.log(currentPath)
-    console.log(fqnParts)
     return {
         name: part,
         href: `/modules/${currentPath}`,
@@ -188,7 +185,7 @@ const breadcrumbs = fqnParts.map((part: any, index: number) => {
               <ul class="nested-list columns">
                  {nestedDeclarations.map(member => (
                     <li>
-                       <a href={`/modules/${member.fqn}`}>{member.name}</a>
+                       <a href={`/modules/${module}/${declData.name}/${member.name}`}>{member.name}</a>
                        <span class="nested-category"> ({member.categoryName})</span> {/* Add helper for category name */}
                     </li>
                  ))}

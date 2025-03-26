@@ -78,7 +78,6 @@ export async function initWasm() {
   wasmInstance = wasmModule.instance;
   wasmExports = wasmInstance.exports as any; // Assign exports
   memory = wasmExports.memory as WebAssembly.Memory; // Assign memory
-  console.log(wasmExports);
 
   // Load the tarball into wasm memory
   const tarballJsArray = new Uint8Array(tarballBuffer);

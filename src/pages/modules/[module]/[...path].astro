@@ -45,9 +45,7 @@ export async function getStaticPaths() {
         const nestedDecls = processDeclarations(declData.members);
         
         // Process each nested declaration recursively
-        for (const nestedDecl of nestedDecls) {
-          await processDeclarationRecursively(nestedDecl.fqn);
-        }
+        await Promise.all(nestedDecls.map(nestedDecl => processDeclarationRecursively(nestedDecl.fqn)));
       }
       
     } catch (error) {
@@ -55,26 +53,25 @@ export async function getStaticPaths() {
     }
   }
   
-  // Process each module
-  for (const module of modules) {
+  // Process each module concurrently
+  await Promise.all(modules.map(async (module) => {
     try {
       const moduleData = await getModuleData(module.name);
       
-      // Process all direct module declarations recursively
+      // Process all direct module declarations concurrently
       if (moduleData.declarations && moduleData.declarations.length > 0) {
-        for (const decl of moduleData.declarations) {
+        await Promise.all(moduleData.declarations.filter(decl => {
           if (!decl.fqn) {
             console.warn(`Skipping declaration with missing FQN (Index: ${decl.originalIndex})`);
-            continue;
+            return false;
           }
-          
-          await processDeclarationRecursively(decl.fqn);
-        }
+          return true;
+        }).map(decl => processDeclarationRecursively(decl.fqn)));
       }
     } catch (error) {
       console.error(`Error processing module ${module.name}:`, error);
     }
-  }
+  }));
   
   console.log(`Successfully prepared ${paths.length} paths for declaration pages.`);
   return paths;

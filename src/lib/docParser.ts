@@ -1,49 +1,42 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
-import { TextDecoder, TextEncoder } from "util";
+import {
+  initializeWasmUtils,
+  decodeString, // Keep direct import if needed for logging callback
+  unwrapString,
+  unwrapSlice32,
+  unwrapSlice64,
+  setInputString,
+} from "./wasmUtils";
+import * as DeclCategories from "./constants"; // Import all constants
 
 // Paths relative to project
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Adjusted paths relative to the new location of docParser.ts
 const WASM_PATH = path.resolve(__dirname, "../../assets/main.wasm");
 const SOURCES_PATH = path.resolve(__dirname, "../../assets/sources.tar");
 
-// Global WebAssembly exports and utils
+// Global WebAssembly state (keep these here)
 let wasmInstance: WebAssembly.Instance;
 export let wasmExports: any; // Make exports accessible if needed elsewhere
 let memory: WebAssembly.Memory;
 let moduleList: { name: string; rootDeclIndex: number }[] = [];
-const textDecoder = new TextDecoder();
-const textEncoder = new TextEncoder();
 
-// Constants for categories (as seen in module.astro and original script)
-export const CAT_namespace = 0;
-export const CAT_container = 1; // Likely includes structs, unions, opaque types
-export const CAT_global_variable = 2;
-export const CAT_function = 3;
-export const CAT_primitive = 4;
-export const CAT_error_set = 5;
-export const CAT_global_const = 6;
-export const CAT_alias = 7;
-export const CAT_type = 8; // Could be enum, struct, union, etc. Needs fields/members check
-export const CAT_type_type = 9; // e.g., Type
-export const CAT_type_function = 10; // e.g., @Type
+// Re-export constants for convenience if pages import directly from docParser
+export * from "./constants";
 
-// --- Existing initWasm and helper functions ---
-// ... initWasm, decodeString, unwrapString, unwrapSlice32, unwrapSlice64, setInputString ...
-// ... findDecl, fullyQualifiedName, declIndexName, updateModuleList ...
-
-// Initialize WebAssembly
+// --- WASM Initialization ---
 export async function initWasm() {
   if (wasmInstance) return; // Already initialized
 
-  // Define __dirname for ES modules
+  // Define __dirname for ES modules - Correct calculation relative to this file
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
-  // Paths relative to project
-  const wasmPath = path.resolve(__dirname, WASM_PATH); // Assuming wasm is copied to public
-  const tarballPath = path.resolve(__dirname, SOURCES_PATH); // Assuming tarball is copied to public
+  // Correct paths relative to THIS file's location (src/lib)
+  const wasmPath = path.resolve(__dirname, "../../assets/main.wasm");
+  const tarballPath = path.resolve(__dirname, "../../assets/sources.tar");
 
   // Read the wasm file
   const wasmBuffer = await fs.readFile(wasmPath);
@@ -55,7 +48,10 @@ export async function initWasm() {
   const importObject = {
     js: {
       log: function (level: any, ptr: number, len: number) {
-        const message = decodeString(ptr, len);
+        // Use decodeString directly here as wasmUtils might not be initialized yet
+        const message = new TextDecoder().decode(
+          new Uint8Array(memory?.buffer, ptr, len) // Use optional chaining for safety during early init
+        );
         switch (level) {
           case 0:
             console.log(message);
@@ -79,9 +75,13 @@ export async function initWasm() {
   wasmExports = wasmInstance.exports as any; // Assign exports
   memory = wasmExports.memory as WebAssembly.Memory; // Assign memory
 
+  // Initialize the utility functions with the instance details
+  initializeWasmUtils(memory, wasmExports);
+
   // Load the tarball into wasm memory
   const tarballJsArray = new Uint8Array(tarballBuffer);
   const ptr = wasmExports.alloc(tarballJsArray.length);
+  if (ptr === 0) throw new Error("WASM failed to allocate memory for tarball.");
   const tarballWasmArray = new Uint8Array(
     memory.buffer,
     ptr,
@@ -89,65 +89,38 @@ export async function initWasm() {
   );
   tarballWasmArray.set(tarballJsArray);
   wasmExports.unpack(ptr, tarballJsArray.length); // Assuming 'unpack' is the function to process the tarball
+  // Note: Consider freeing the tarball memory in WASM if 'unpack' doesn't consume it
+  // if (wasmExports.free) { wasmExports.free(ptr, tarballJsArray.length); }
 
   // Update module list
   updateModuleList(); // Populate moduleList array
   console.log("WASM Initialized and Tarball processed.");
 }
 
-// Helper functions (assuming these exist and work correctly)
-function decodeString(ptr: number, len: number): string {
-  if (!memory) throw new Error("WASM memory not initialized");
-  return textDecoder.decode(new Uint8Array(memory.buffer, ptr, len));
-}
+// --- Internal Helper Functions ---
 
-export function unwrapString(bigint: bigint): string {
-  if (!wasmExports || !memory) throw new Error("WASM not initialized");
-  const ptr = Number(bigint & 0xffffffffn);
-  const len = Number(bigint >> 32n);
-  if (len === 0) return "";
-  return decodeString(ptr, len);
-}
-
-function unwrapSlice32(bigint: bigint): Uint32Array {
-  if (!wasmExports || !memory) throw new Error("WASM not initialized");
-  const ptr = Number(bigint & 0xffffffffn);
-  const len = Number(bigint >> 32n);
-  if (len === 0) return new Uint32Array(0);
-  return new Uint32Array(memory.buffer, ptr, len).slice(); // Use slice to copy, preventing issues with memory growth
-}
-
-function unwrapSlice64(bigint: bigint): BigUint64Array {
-  if (!wasmExports || !memory) throw new Error("WASM not initialized");
-  const ptr = Number(bigint & 0xffffffffn);
-  const len = Number(bigint >> 32n);
-  if (len === 0) return new BigUint64Array(0);
-  return new BigUint64Array(memory.buffer, ptr, len).slice(); // Use slice to copy
-}
-
-function setInputString(s: string): void {
-  if (!wasmExports || !memory) throw new Error("WASM not initialized");
-  const jsArray = textEncoder.encode(s);
-  const len = jsArray.length;
-  const ptr = wasmExports.set_input_string(len);
-  const wasmArray = new Uint8Array(memory.buffer, ptr, len);
-  wasmArray.set(jsArray);
-}
+// Removed decodeString, unwrapString, unwrapSlice32, unwrapSlice64, setInputString (moved to wasmUtils.ts)
 
 function findDecl(fqn: string): number | null {
   if (!wasmExports) throw new Error("WASM not initialized");
   setInputString(fqn);
   const result = wasmExports.find_decl();
-  return result === 0xffffffff ? null : result; // Assuming -1 or uint max indicates not found
+  // Check against WASM's specific "not found" value (often -1 represented as max uint)
+  // Assuming 0xFFFFFFFF is the "not found" indicator
+  return result === 0xffffffff ? null : result;
 }
 
 function fullyQualifiedName(declIndex: number): string {
   if (!wasmExports) throw new Error("WASM not initialized");
+  // Add check for invalid index if necessary
+  if (declIndex === 0xffffffff) return "[Invalid Index]";
   return unwrapString(wasmExports.decl_fqn(declIndex));
 }
 
 function declIndexName(declIndex: number): string {
   if (!wasmExports) throw new Error("WASM not initialized");
+  // Add check for invalid index if necessary
+  if (declIndex === 0xffffffff) return "[Invalid Index]";
   return unwrapString(wasmExports.decl_name(declIndex));
 }
 
@@ -156,45 +129,32 @@ function updateModuleList(): void {
     throw new Error("WASM not initialized when updateModuleList called");
   moduleList = [];
   let i = 0;
-  const MAX_MODULES_CHECK = 10000; // Add a safety break to prevent infinite loops
+  const MAX_MODULES_CHECK = 10000; // Safety break
 
   console.log("Starting module discovery...");
 
   while (i < MAX_MODULES_CHECK) {
-    // Call module_name with the current index
     const nameBigInt = wasmExports.module_name(i);
-
-    // Extract the length from the returned BigInt (assuming length is in the upper 32 bits)
     const len = Number(nameBigInt >> 32n);
 
     if (len === 0) {
-      // If the length is 0, assume it's an empty string, meaning no more modules
-      console.log(
-        `module_name(${i}) returned empty string. Assuming end of modules.`
-      );
-      break; // Exit the loop
+      // console.log(`module_name(${i}) returned empty string. Assuming end of modules.`);
+      break; // End of modules
     }
 
-    // If length is non-zero, decode the name
-    const name = decodeString(Number(nameBigInt & 0xffffffffn), len); // Use decodeString directly
+    // Use decodeString from wasmUtils now that it's initialized
+    const name = decodeString(Number(nameBigInt & 0xffffffffn), len);
 
-    // Find the root declaration for this module
     const rootDeclIndex = wasmExports.find_module_root(i);
 
     if (rootDeclIndex !== 0xffffffff) {
-      // Check if module root found (using 0xFFFFFFFF convention)
       moduleList.push({ name, rootDeclIndex });
-      // console.log(`Found module: ${name} (index ${i}, root ${rootDeclIndex})`);
     } else {
-      // Log a warning if a module name exists but its root can't be found
       console.warn(
         `Could not find root declaration for module: "${name}" (index ${i})`
       );
-      // Optionally, you could still add it to the list if needed, maybe with rootDeclIndex = null
-      // moduleList.push({ name, rootDeclIndex: null });
     }
-
-    i++; // Increment index to check the next module
+    i++;
   }
 
   if (i === MAX_MODULES_CHECK) {
@@ -203,9 +163,7 @@ function updateModuleList(): void {
     );
   }
 
-  // Optional: Sort modules by name after discovery
   moduleList.sort((a, b) => a.name.localeCompare(b.name));
-
   console.log(`Finished module discovery. Found ${moduleList.length} modules.`);
 }
 
@@ -224,101 +182,83 @@ export async function getModuleData(moduleName: string) {
   }
 
   const rootDeclIndex = moduleInfo.rootDeclIndex;
-  // Get module members (assuming namespace_members works for modules)
-  // Pass true for include_private if needed, false otherwise
   const memberIndices = unwrapSlice32(
-    wasmExports.namespace_members(rootDeclIndex, false)
+    wasmExports.namespace_members(rootDeclIndex, false) // false = exclude private members
   );
 
   const declarations = processDeclarations(Array.from(memberIndices));
 
-  // Get module documentation
   const docsHtml = unwrapString(
-    wasmExports.decl_docs_html(rootDeclIndex, false)
+    wasmExports.decl_docs_html(rootDeclIndex, false) // false = full docs
   );
 
-  // Get module fields (if the module root itself is a struct-like container)
   const fieldIndices = unwrapSlice32(wasmExports.decl_fields(rootDeclIndex));
 
   return {
     name: moduleName,
     rootDeclIndex: rootDeclIndex,
     docs: docsHtml,
-    declarations: declarations, // Array of basic info for listing
-    fields: Array.from(fieldIndices), // Indices of fields belonging to the module container
+    declarations: declarations,
+    fields: Array.from(fieldIndices),
   };
 }
 
-// Helper to process a list of declaration indices
+// Helper to process a list of declaration indices into structured data
 export function processDeclarations(memberIndices: number[]) {
+  if (!wasmExports) throw new Error("WASM not initialized");
+
   const declarations = [];
   for (let memberIndex of memberIndices) {
-    // Handle potential aliases first
     let originalIndex = memberIndex;
-    let category = wasmExports.categorize_decl(memberIndex, 0); // 0 might mean default context
+    let category = wasmExports.categorize_decl(memberIndex, 0); // 0 = default context
 
-    // Follow aliases to get the actual declaration
-    while (category === CAT_alias) {
-      memberIndex = wasmExports.get_aliasee(memberIndex); // Assuming get_aliasee exists
-      if (memberIndex === 0xffffffff || memberIndex === originalIndex) break; // Alias loop or not found
-      category = wasmExports.categorize_decl(memberIndex, 0);
+    // Resolve aliases
+    let targetIndex = memberIndex;
+    while (category === DeclCategories.CAT_alias) {
+      const nextIndex = wasmExports.get_aliasee(targetIndex);
+      // Check for resolution failure or loop
+      if (nextIndex === 0xffffffff || nextIndex === targetIndex) {
+        console.warn(
+          `Alias resolution failed or loop detected for index ${originalIndex}. Using original index ${targetIndex}.`
+        );
+        // Keep targetIndex as the last valid index before failure/loop
+        break;
+      }
+      targetIndex = nextIndex;
+      category = wasmExports.categorize_decl(targetIndex, 0);
     }
-    if (memberIndex === 0xffffffff) continue; // Skip if alias resolution failed
+
+    // Skip if resolution somehow ended on an invalid index (shouldn't happen if break works)
+    if (targetIndex === 0xffffffff) continue;
 
     const name = declIndexName(originalIndex); // Use original name (alias name)
     const fqn = fullyQualifiedName(originalIndex); // Use original FQN for linking
-    const targetFqn = fullyQualifiedName(memberIndex); // FQN of the actual declaration
+    const targetFqn = fullyQualifiedName(targetIndex); // FQN of the actual declaration
     const docsShortHtml = unwrapString(
-      wasmExports.decl_docs_html(memberIndex, true)
-    ); // Short docs of target
-    const typeHtml = unwrapString(wasmExports.decl_type_html(memberIndex)); // Type HTML of target
+      wasmExports.decl_docs_html(targetIndex, true) // true = short docs of target
+    );
+    const typeHtml = unwrapString(wasmExports.decl_type_html(targetIndex)); // Type HTML of target
     const protoHtmlShort =
-      category === CAT_function || category === CAT_type_function
-        ? unwrapString(wasmExports.decl_fn_proto_html(memberIndex, true)) // Short proto for list view
+      category === DeclCategories.CAT_function ||
+      category === DeclCategories.CAT_type_function
+        ? unwrapString(wasmExports.decl_fn_proto_html(targetIndex, true)) // true = short proto
         : null;
 
     declarations.push({
       originalIndex: originalIndex,
-      targetIndex: memberIndex,
+      targetIndex: targetIndex, // The resolved index
       name: name,
       fqn: fqn,
       targetFqn: targetFqn,
-      category: category,
+      category: category, // Category of the target
       docsShort: docsShortHtml,
       typeHtml: typeHtml,
-      protoHtmlShort: protoHtmlShort, // Add short function prototype if applicable
+      protoHtmlShort: protoHtmlShort,
     });
   }
   return declarations;
 }
 
-/*
- * Expected structure of the object returned by getDeclData(declIndex):
- * {
- *   index: number,          // The resolved declaration index (after following aliases)
- *   originalIndex: number,  // The index originally requested (could be an alias)
- *   name: string,           // Name of the declaration (original name if alias)
- *   fqn: string,            // Fully qualified name (original fqn if alias)
- *   targetFqn: string,      // Fully qualified name of the resolved declaration
- *   category: number,       // Category constant (CAT_*)
- *   categoryName: string,   // Human-readable category name ("function", "struct", etc.)
- *   filePath: string,       // Source file path
- *   docs: string | null,    // Full documentation HTML, or null
- *   sourceHtml: string | null, // Syntax-highlighted source HTML, or null
- *
- *   // Category-specific fields:
- *   protoHtml?: string | null, // For functions: Full prototype HTML
- *   params?: number[],         // For functions: Array of parameter indices
- *   fields?: number[],         // For containers/types: Array of field indices
- *   members?: number[],        // For namespaces/containers: Array of member declaration indices
- *   errorSetNodes?: bigint[],  // For functions/error sets: Array of error node identifiers (BigUint64Array)
- *   errorSetBaseDecl?: number, // For functions with error sets: The decl index the errors are relative to
- *   doctestHtml?: string | null, // For functions/types: Doc test HTML
- *   typeHtml?: string | null,  // For variables/constants/fields: Type HTML
- *   isAlias: boolean          // True if the original request was an alias
- *   // ... any other relevant data extracted from WASM ...
- * }
- */
 export async function getDeclData(identifier: number | string) {
   await initWasm();
 
@@ -332,199 +272,165 @@ export async function getDeclData(identifier: number | string) {
     }
     declIndex = originalIndex;
   } else {
+    // Assuming identifier is a valid index
     originalIndex = identifier;
     declIndex = identifier;
+    // Verify the index is somewhat valid if possible (e.g., not 0xffffffff)
+    if (declIndex === 0xffffffff) {
+      throw new Error(`Invalid declaration index provided: ${identifier}`);
+    }
   }
 
   let category = wasmExports.categorize_decl(declIndex, 0);
-  const isAlias = category === CAT_alias;
-  let targetFqn = "";
+  const isAlias = category === DeclCategories.CAT_alias;
   let targetIndex = declIndex;
+  let targetFqn = "";
 
-  // Follow aliases
-  while (category === CAT_alias) {
-    const nextIndex: number = wasmExports.get_aliasee(declIndex);
-    if (nextIndex === 0xffffffff || nextIndex === declIndex) {
+  // Resolve alias if necessary
+  while (category === DeclCategories.CAT_alias) {
+    const nextIndex: number = wasmExports.get_aliasee(targetIndex);
+    if (nextIndex === 0xffffffff || nextIndex === targetIndex) {
       console.warn(
-        `Could not resolve alias or alias loop detected for index ${originalIndex}`
+        `Could not resolve alias or alias loop detected for index ${originalIndex}. Using index ${targetIndex}.`
       );
-      // Fallback to treating it as the alias itself if resolution fails
-      declIndex = originalIndex;
-      targetIndex = originalIndex;
-      category = wasmExports.categorize_decl(declIndex, 0); // Re-categorize original
-      targetFqn = fullyQualifiedName(declIndex);
-      break;
+      break; // Stop resolution
     }
-    declIndex = nextIndex;
-    targetIndex = declIndex; // Keep track of the final target
-    category = wasmExports.categorize_decl(declIndex, 0);
-    targetFqn = fullyQualifiedName(targetIndex); // Get FQN of the final target
+    targetIndex = nextIndex;
+    category = wasmExports.categorize_decl(targetIndex, 0);
   }
-  if (targetFqn === "") {
-    // If it wasn't an alias or resolution failed and we broke early
-    targetFqn = fullyQualifiedName(targetIndex);
-  }
+
+  // Get FQN of the final target
+  targetFqn = fullyQualifiedName(targetIndex);
 
   // Base declaration data
   const data: any = {
-    index: targetIndex,
-    originalIndex: originalIndex,
+    index: targetIndex, // The resolved index
+    originalIndex: originalIndex, // The index requested (could be alias)
     name: declIndexName(originalIndex), // Always use original name
     fqn: fullyQualifiedName(originalIndex), // Always use original FQN
-    targetFqn: targetFqn,
-    category: category,
+    targetFqn: targetFqn, // FQN of the resolved declaration
+    category: category, // Category of the resolved declaration
     categoryName: unwrapString(wasmExports.decl_category_name(targetIndex)),
     filePath: unwrapString(wasmExports.decl_file_path(targetIndex)),
-    docs: unwrapString(wasmExports.decl_docs_html(targetIndex, false)), // Full docs
+    docs: unwrapString(wasmExports.decl_docs_html(targetIndex, false)), // false = Full docs
     sourceHtml: unwrapString(wasmExports.decl_source_html(targetIndex)),
-    typeHtml: unwrapString(wasmExports.decl_type_html(targetIndex)), // Useful for vars, fields, etc.
-    isAlias: isAlias,
+    typeHtml: unwrapString(wasmExports.decl_type_html(targetIndex)), // Type for vars, fields etc.
+    isAlias: isAlias, // Was the original identifier an alias?
   };
 
-  // Add category-specific data
+  // Add category-specific data based on the *target* declaration's category
   switch (category) {
-    case CAT_function:
-    case CAT_type_function:
+    case DeclCategories.CAT_function:
+    case DeclCategories.CAT_type_function:
       data.protoHtml = unwrapString(
-        wasmExports.decl_fn_proto_html(targetIndex, false)
-      ); // Full prototype
+        wasmExports.decl_fn_proto_html(targetIndex, false) // false = Full prototype
+      );
       data.params = Array.from(
         unwrapSlice32(wasmExports.decl_params(targetIndex))
       );
       data.doctestHtml = unwrapString(
         wasmExports.decl_doctest_html(targetIndex)
       );
-      // Handle error set if present
-      const errorSetNode = wasmExports.fn_error_set(targetIndex); // Returns a BigInt node identifier?
+      const errorSetNode = wasmExports.fn_error_set(targetIndex);
       if (errorSetNode !== 0n) {
-        // Assuming 0 means no error set
+        // Assuming 0n indicates no error set
         data.errorSetBaseDecl = wasmExports.fn_error_set_decl(
           targetIndex,
           errorSetNode
         );
-        data.errorSetNodes = Array.from(
-          unwrapSlice64(
-            wasmExports.error_set_node_list(data.errorSetBaseDecl, errorSetNode)
-          )
-        );
+        // Check if errorSetBaseDecl is valid before proceeding
+        if (data.errorSetBaseDecl !== 0xffffffff) {
+          data.errorSetNodes = Array.from(
+            unwrapSlice64(
+              wasmExports.error_set_node_list(
+                data.errorSetBaseDecl,
+                errorSetNode
+              )
+            )
+          );
+        } else {
+          console.warn(
+            `fn_error_set_decl returned invalid index for target ${targetIndex}, node ${errorSetNode}`
+          );
+          data.errorSetNodes = [];
+        }
+      } else {
+        data.errorSetNodes = []; // Ensure array exists even if empty
       }
       break;
 
-    case CAT_container:
-    case CAT_type: // Structs, Enums, Unions might fall here
-    case CAT_namespace: // Namespaces also have members
+    case DeclCategories.CAT_container:
+    case DeclCategories.CAT_type:
+    case DeclCategories.CAT_namespace:
       data.fields = Array.from(
         unwrapSlice32(wasmExports.decl_fields(targetIndex))
       );
-      // For namespaces or types that contain nested declarations:
       data.members = Array.from(
-        unwrapSlice32(wasmExports.namespace_members(targetIndex, false))
+        unwrapSlice32(wasmExports.namespace_members(targetIndex, false)) // false = public members
       );
-      // Maybe doc tests apply to types too? Check WASM API
       data.doctestHtml = unwrapString(
         wasmExports.decl_doctest_html(targetIndex)
       );
       break;
 
-    case CAT_error_set:
-      // Get the errors directly associated with this error set declaration
+    case DeclCategories.CAT_error_set:
+      // Assuming decl_error_set gives nodes *directly* associated with this set decl
       data.errorSetNodes = Array.from(
         unwrapSlice64(wasmExports.decl_error_set(targetIndex))
       );
-      // Error sets themselves usually don't have fields/params in the same way,
-      // but might have associated documentation or source.
+      // Error sets might also have a base decl if they are defined relative to another
+      // Check if WASM provides this info, e.g., wasmExports.error_set_base_decl(targetIndex)
+      // data.errorSetBaseDecl = wasmExports.error_set_base_decl(targetIndex); // Hypothetical
       break;
 
-    case CAT_global_variable:
-    case CAT_global_const:
-      // Type HTML is already included in the base data
-      break;
-
-    case CAT_primitive:
-      // Usually just has documentation.
+    // Variables, Constants, Primitives usually don't need more than base data + typeHtml
+    case DeclCategories.CAT_global_variable:
+    case DeclCategories.CAT_global_const:
+    case DeclCategories.CAT_primitive:
       break;
   }
+
+  // Ensure arrays exist even if empty
+  data.params = data.params ?? [];
+  data.fields = data.fields ?? [];
+  data.members = data.members ?? [];
+  data.errorSetNodes = data.errorSetNodes ?? [];
 
   return data;
 }
 
-// Function to get HTML for a specific parameter (used by [...path].astro)
+// --- Data Fetching Helpers for Specific Parts ---
+
 export async function getParamData(
   declIndex: number,
   paramIndex: number
 ): Promise<{ html: string }> {
   await initWasm();
-  // Ensure the declIndex corresponds to a function or type function
+  // TODO: Add validation: check if declIndex is actually a function/type_function?
   const html = unwrapString(wasmExports.decl_param_html(declIndex, paramIndex));
   return { html };
 }
 
-// Function to get HTML for a specific field (used by [...path].astro and [module].astro)
 export async function getFieldData(
   declIndex: number,
   fieldIndex: number
 ): Promise<{ html: string }> {
   await initWasm();
-  // Ensure the declIndex corresponds to a container/type
+  // TODO: Add validation: check if declIndex is actually a container/type?
   const html = unwrapString(wasmExports.decl_field_html(declIndex, fieldIndex));
   return { html };
 }
 
-// Function to get HTML for a specific error in an error set (used by [...path].astro)
 export async function getErrorData(
-  baseDeclIndex: number,
+  baseDeclIndex: number, // The index relative to which the error node is defined
   errorNode: bigint
 ): Promise<{ html: string }> {
   await initWasm();
+  // Validate baseDeclIndex?
+  if (baseDeclIndex === 0xffffffff) {
+    console.error(`getErrorData called with invalid baseDeclIndex.`);
+    return { html: "[Error: Invalid Base Index]" };
+  }
   const html = unwrapString(wasmExports.error_html(baseDeclIndex, errorNode));
   return { html };
-}
-
-// Get *basic* info for all declarations - potentially very large, use with caution
-export async function getAllDeclarations() {
-  await initWasm();
-  console.warn(
-    "getAllDeclarations() might be slow and memory intensive for large libraries."
-  );
-  // This needs a WASM function that returns *all* known declaration indices.
-  // Let's assume `wasmExports.get_all_decls()` returns a BigInt pointer/len pair for a Uint32Array.
-  // const allDeclIndices = unwrapSlice32(wasmExports.get_all_decls()); // Hypothetical function
-  // For now, let's rebuild it from modules - less efficient but feasible with current info
-  let allIndicesSet = new Set<number>();
-  for (const module of moduleList) {
-    const memberIndices = unwrapSlice32(
-      wasmExports.namespace_members(module.rootDeclIndex, true)
-    ); // Include private? Maybe?
-    memberIndices.forEach((idx) => allIndicesSet.add(idx));
-    // Need a way to recursively find *all* nested decls, not just top-level module members.
-    // This is complex and might require more from the WASM side.
-    // The current implementation is INCOMPLETE for truly *all* decls.
-  }
-
-  // Using the incomplete set for now:
-  return processDeclarations(Array.from(allIndicesSet));
-}
-
-// Execute search query
-export async function executeSearch(query: string, ignoreCase: boolean = true) {
-  await initWasm();
-
-  // Set the query string in WASM memory (assuming setQueryString exists)
-  const setQueryStringWasm = (s: string) => {
-    const jsArray = textEncoder.encode(s);
-    const len = jsArray.length;
-    const ptr = wasmExports.query_begin(len); // Assuming query_begin allocates and returns pointer
-    const wasmArray = new Uint8Array(memory.buffer, ptr, len);
-    wasmArray.set(jsArray);
-  };
-  setQueryStringWasm(query);
-
-  // Execute the search
-  const resultsBigInt = wasmExports.query_exec(ignoreCase); // Assuming returns ptr/len BigInt
-
-  // Get the search results
-  const resultsIndices = unwrapSlice32(resultsBigInt);
-
-  // Convert to declaration data (basic info for search results)
-  return processDeclarations(Array.from(resultsIndices));
 }

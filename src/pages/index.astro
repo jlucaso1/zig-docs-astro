@@ -1,21 +1,24 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { getAllModules } from "../lib/docParser";
-
+import { getDeclPath } from "../lib/pathUtils"; // Import path util
 
 // Get all modules at build time
 const modules = await getAllModules();
+// Sort modules alphabetically for display
+modules.sort((a, b) => a.name.localeCompare(b.name));
 ---
 
 <Layout title="Modules - Zig Documentation">
   <main>
     <h1>Zig Standard Library Modules</h1>
-    
+
     <div class="modules-container">
       <ul class="module-list">
         {modules.map(module => (
           <li>
-            <a href={`/modules/${module.name}`}>
+            {/* Use path util for link generation */}
+            <a href={getDeclPath(module.name)}>
               <span class="module-name">{module.name}</span>
             </a>
           </li>
@@ -29,7 +32,7 @@ const modules = await getAllModules();
   .modules-container {
     margin: 2rem 0;
   }
-  
+
   .module-list {
     list-style-type: none;
     padding: 0;
@@ -37,32 +40,35 @@ const modules = await getAllModules();
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1rem;
   }
-  
+
   .module-list li {
     background-color: #f5f5f5;
     border-radius: 0.25rem;
     transition: background-color 0.2s;
   }
-  
+
   .module-list li:hover {
     background-color: #e0e0e0;
   }
-  
+
   .module-list a {
     display: block;
     padding: 1rem;
-    color: #2A6286;
+    color: #2A6286; /* Consider updating color for better contrast/theming */
     text-decoration: none;
     font-family: "Source Code Pro", monospace;
   }
-  
+
   @media (prefers-color-scheme: dark) {
     .module-list li {
       background-color: #222;
     }
-    
+
     .module-list li:hover {
       background-color: #333;
     }
+     .module-list a {
+       color: #58a6ff; /* Adjust link color for dark mode */
+     }
   }
 </style>

@@ -1,70 +1,98 @@
 ---
-const path = Astro.params.path;
-const module = Astro.params.module;
-const modulePath = `${module}/${path || ""}`;
-const parts = modulePath.split("/")?.filter(Boolean);
+// Expect a prop like "std" or "std.time.Instant"
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+
+// Split the path into parts for breadcrumbs
+const parts = currentPath?.split('.') || [];
+
+// Generate breadcrumb items
+const breadcrumbs = parts.map((part, index) => {
+  const fqn = parts.slice(0, index + 1).join('.');
+  const path = fqn.replace(/\./g, '/'); // Convert FQN to URL path segment
+  return {
+    name: part,
+    href: `/modules/${path}`,
+    isCurrent: index === parts.length - 1,
+  };
+});
 ---
 
 <div id="sectNav">
   <ul id="listNav">
     <li><a href="/">Modules</a></li>
-    {
-      parts.map((part: unknown, index: number) => {
-        const path = parts.slice(0, index + 1).join("/");
-        return (
-          <li>
-            <a
-              href={`/modules/${path}`}
-              class={index === parts.length - 1 ? "active" : ""}
-            >
-              {part}
-            </a>
-          </li>
-        );
-      })
-    }
+    {breadcrumbs.map(crumb => (
+      <li>
+        <a href={crumb.href} class:list={[crumb.isCurrent && "active"]}>
+          {crumb.name}
+        </a>
+      </li>
+    ))}
   </ul>
 </div>
 
+<!-- Styles remain the same -->
 <style>
   #listNav {
     list-style-type: none;
-    margin: 0.5em 0 0 0;
+    margin: 0.5em 0 1em 0; /* Added bottom margin back */
     padding: 0;
     overflow: hidden;
     background-color: #f1f1f1;
+    border-radius: 4px; /* Slight rounding */
   }
 
   #listNav li {
     float: left;
   }
+   /* Add separators using ::before on list items except the first two */
+   #listNav li:not(:first-child):not(:nth-child(2))::before {
+      content: '/';
+      padding: 0 0.4em; /* Adjust spacing */
+      color: #888;
+      display: inline-block; /* Needed for padding */
+      vertical-align: middle; /* Align with text */
+   }
+
 
   #listNav li a {
-    display: block;
+    display: inline-block; /* Change from block to allow separator */
     color: #000;
     text-align: center;
-    padding: 0.5em 0.8em;
+    padding: 0.5em 0.2em; /* Adjust padding */
     text-decoration: none;
+    vertical-align: middle;
   }
 
   #listNav li a:hover {
-    background-color: #555;
-    color: #fff;
+    background-color: #ddd;
+    border-radius: 2px; /* Add slight rounding on hover */
   }
 
   #listNav li a.active {
     background-color: #ffbb4d;
     color: #000;
+    font-weight: bold;
+     border-radius: 2px;
   }
 
   @media (prefers-color-scheme: dark) {
     #listNav {
       background-color: #333;
     }
+     #listNav li:not(:first-child):not(:nth-child(2))::before {
+         color: #777;
+     }
 
     #listNav li a {
       color: #fff;
     }
+     #listNav li a:hover {
+       background-color: #444;
+     }
 
     #listNav li a.active {
       background-color: #ffbb4d;

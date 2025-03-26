@@ -1,157 +1,105 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import {
-  getAllModules,
-  getModuleData,
-  getFieldData,
-  CAT_namespace,
-  CAT_container,
-  CAT_global_variable,
-  CAT_function,
-  CAT_primitive,
-  CAT_error_set,
-  CAT_global_const,
-  CAT_alias,
-  CAT_type,
-  CAT_type_type,
-  CAT_type_function,
-} from "../../lib/docParser";
 import ModuleNav from "../../components/ModuleNav.astro";
+// Import specific constants and path utils
+import * as DeclCategories from "../../lib/constants";
+import { getDeclPath, getModuleSourcePath } from "../../lib/pathUtils";
+// Import main data functions from docParser
+import { getFieldData } from "../../lib/docParser";
+
 
 // Generate all module pages at build time
 export async function getStaticPaths() {
-  const modules = await getAllModules();
+  // Ensure WASM is initialized
+  // await initWasm(); // May not be needed depending on Astro setup
 
-  return Promise.all(
+  const { getAllModules: getAllModulesInternal, getModuleData: getModuleDataInternal } = await import('../../lib/docParser'); // Dynamic import if needed
+
+  const modules = await getAllModulesInternal();
+
+  // Use Promise.allSettled to handle potential errors for individual modules
+  const results = await Promise.allSettled(
     modules.map(async (module) => {
       try {
-        const moduleData = await getModuleData(module.name);
+        const moduleData = await getModuleDataInternal(module.name);
         return {
           params: { module: module.name },
-          props: { moduleData: { ...moduleData, moduleName: module.name } },
+          props: { moduleData: { ...moduleData, moduleName: module.name } }, // Keep moduleName here for convenience
         };
       } catch (error) {
-        console.error(`Error fetching data for module ${module.name}:`, error);
-        // Return a fallback or skip this path
-        // For now, let's skip it if data fetching fails
-        return null;
+        console.error(`Error fetching data for module ${module.name} in getStaticPaths:`, error);
+        // Throw error to mark this path as failed if needed, or return null to skip
+        throw new Error(`Failed to generate path for ${module.name}`);
+        // return null; // Alternative: skip path on error
       }
     })
-  ).then((paths) => paths.filter((p) => p !== null)); // Filter out null paths
+  );
+
+  // Filter out rejected promises and extract fulfilled values
+  const paths = results
+      .filter(result => result.status === 'fulfilled')
+      .map(result => (result as PromiseFulfilledResult<any>).value)
+      // .filter(p => p !== null); // Only needed if returning null on error
+
+   console.log(`Successfully prepared ${paths.length} paths for module pages.`);
+   return paths;
 }
 
-const { module } = Astro.params;
-const { moduleData } = Astro.props;
+const { module } = Astro.params; // The module name from the URL
+const { moduleData } = Astro.props; // Received from getStaticPaths
 
-// Process declarations into categories (using data from getModuleData)
-const typesList: {
-  originalIndex: number;
-  targetIndex: number;
-  name: string;
-  fqn: string;
-  targetFqn: string;
-  category: any;
-  docsShort: string;
-  typeHtml: string;
-  protoHtmlShort: string | null;
-}[] = [];
-const namespacesList: {
-  originalIndex: number;
-  targetIndex: number;
-  name: string;
-  fqn: string;
-  targetFqn: string;
-  category: any;
-  docsShort: string;
-  typeHtml: string;
-  protoHtmlShort: string | null;
-}[] = [];
-const errSetsList: {
-  originalIndex: number;
-  targetIndex: number;
-  name: string;
-  fqn: string;
-  targetFqn: string;
-  category: any;
-  docsShort: string;
-  typeHtml: string;
-  protoHtmlShort: string | null;
-}[] = [];
-const fnsList: {
-  originalIndex: number;
-  targetIndex: number;
-  name: string;
-  fqn: string;
-  targetFqn: string;
-  category: any;
-  docsShort: string;
-  typeHtml: string;
-  protoHtmlShort: string | null;
-}[] = [];
-const varsList: {
-  originalIndex?: number;
-  targetIndex?: number;
-  name: any;
-  fqn?: string;
-  targetFqn?: string;
-  category?: any;
-  docsShort?: string;
-  typeHtml?: string;
-  protoHtmlShort?: string | null;
-}[] = []; // Includes global vars and consts
-const valsList: {
-  originalIndex: number;
-  targetIndex: number;
-  name: string;
-  fqn: string;
-  targetFqn: string;
-  category: any;
-  docsShort: string;
-  typeHtml: string;
-  protoHtmlShort: string | null;
-}[] = []; // Includes primitives and potentially enum values if categorized differently
+// --- Process declarations into categories ---
+const typesList: any[] = [];
+const namespacesList: any[] = [];
+const errSetsList: any[] = [];
+const fnsList: any[] = [];
+const varsList: any[] = []; // Includes global vars and consts
+const valsList: any[] = []; // Includes primitives
 
-moduleData.declarations.forEach((decl) => {
-  // Note: decl.category is the category of the *target* declaration after resolving aliases
+// Use constants from the imported module
+moduleData.declarations.forEach((decl: { category: any; fqn: any; }) => {
   switch (decl.category) {
-    case CAT_namespace:
+    case DeclCategories.CAT_namespace:
       namespacesList.push(decl);
       break;
-    case CAT_container: // Structs, Unions, Opaque
-    case CAT_type: // Enums might be here
-    case CAT_type_type: // 'type' itself
+    case DeclCategories.CAT_container:
+    case DeclCategories.CAT_type:
+    case DeclCategories.CAT_type_type:
       typesList.push(decl);
       break;
-    case CAT_type_function: // @Type functions
-      // Decide if these should be listed under Types or Functions
-      // Let's put them in Types for now as they return a type
+    case DeclCategories.CAT_type_function:
+      // Grouping with Types for now
       typesList.push(decl);
-      // Alternatively, could list in functions: fnsList.push(decl);
       break;
-    case CAT_global_variable:
-    case CAT_global_const: // Group constants with variables
+    case DeclCategories.CAT_global_variable:
+    case DeclCategories.CAT_global_const:
       varsList.push(decl);
       break;
-    case CAT_function:
+    case DeclCategories.CAT_function:
       fnsList.push(decl);
       break;
-    case CAT_error_set:
+    case DeclCategories.CAT_error_set:
       errSetsList.push(decl);
       break;
-    case CAT_primitive:
-      valsList.push(decl); // Primitives like `void`, `bool`, number types
+    case DeclCategories.CAT_primitive:
+      valsList.push(decl);
       break;
-    // CAT_alias should not appear here as processDeclarations resolves them
+    case DeclCategories.CAT_alias:
+       // Aliases should be resolved by processDeclarations, but handle defensively
+       console.warn(`Unexpected unresolved alias found in module ${module}: ${decl.fqn}`);
+       // Decide where to put unresolved aliases, maybe Types?
+       // typesList.push(decl);
+       break;
     default:
       console.warn(
-        `Unknown category ${decl.category} for declaration ${decl.fqn}`
+        `Unknown category ${decl.category} for declaration ${decl.fqn} in module ${module}`
       );
+      // Add to a generic list or ignore
   }
 });
 
-// Sort lists by name (using the original alias name if applicable)
-const sortByName = (a: { name: string }, b: { name: any }) =>
-  a.name.localeCompare(b.name);
+// Sort lists alphabetically by name
+const sortByName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
 typesList.sort(sortByName);
 namespacesList.sort(sortByName);
 errSetsList.sort(sortByName);
@@ -161,181 +109,167 @@ valsList.sort(sortByName);
 
 // Fetch field data if the module itself has fields
 let moduleFieldsHtml: any[] = [];
-if (moduleData.fields && moduleData.fields.length > 0) {
+if (moduleData.fields?.length > 0) {
   moduleFieldsHtml = await Promise.all(
-    moduleData.fields.map((fieldIndex) =>
+    moduleData.fields.map((fieldIndex: number) =>
       getFieldData(moduleData.rootDeclIndex, fieldIndex)
     )
   );
 }
 
-// Determine the source path for the module file itself
-// Assuming module 'std.time' corresponds to a file like 'std/time.zig'
-// This logic might need refinement based on actual file structure.
-const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
+// Determine the source path for the module file itself using path util
+const moduleSourceLink = getModuleSourcePath(module);
 ---
 
 <Layout title={`${module} - Zig Documentation`}>
   <main>
-    <ModuleNav moduleName={module} />
+    {/* Pass the module name as the current path */}
+    <ModuleNav currentPath={module} />
 
     <h1 id="hdrName">
       <span>module {module}</span>
-      <!-- Link to the source file of the module -->
-      <a href={`/src/${moduleSourcePath}`}>[src]</a>
+      {/* Link to the source file of the module */}
+      <a href={moduleSourceLink} target="_blank" title="View source">[src]</a>
     </h1>
 
     <!-- Module documentation -->
-    {
-      moduleData.docs && (
-        <div id="tldDocs" class="docs" set:html={moduleData.docs} />
-      )
-    }
+    {moduleData.docs && <div id="tldDocs" class="docs" set:html={moduleData.docs} />}
 
     <!-- Types (Structs, Enums, Unions, Type Functions) -->
-    {
-      typesList.length > 0 && (
-        <section id="sectTypes">
-          <h2>Types</h2>
-          <ul id="listTypes" class="columns">
-            {typesList.map((type) => (
-              <li>
-                {/* Update link to use proper path format */}
-                <a href={`/modules/${type.fqn.replace(/\./g, '/')}`}>{type.name}</a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )
-    }
+    {typesList.length > 0 && (
+      <section id="sectTypes">
+        <h2>Types</h2>
+        <ul id="listTypes" class="columns">
+          {typesList.map((type) => (
+            <li>
+              {/* Use path util for link */}
+              <a href={getDeclPath(type.fqn)}>{type.name}</a>
+              {/* Optionally show alias info if needed */}
+              {/* {type.originalIndex !== type.targetIndex && <span class="alias-info"> (alias for {type.targetFqn})</span>} */}
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
 
     <!-- Namespaces -->
-    {
-      namespacesList.length > 0 && (
-        <section id="sectNamespaces">
-          <h2>Namespaces</h2>
-          <ul id="listNamespaces" class="columns">
-            {namespacesList.map((namespace) => (
-              <li>
-                <a href={`/modules/${namespace.fqn.replace(/\./g, '/')}`}>{namespace.name}</a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )
-    }
+    {namespacesList.length > 0 && (
+      <section id="sectNamespaces">
+        <h2>Namespaces</h2>
+        <ul id="listNamespaces" class="columns">
+          {namespacesList.map((namespace) => (
+            <li>
+              <a href={getDeclPath(namespace.fqn)}>{namespace.name}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
 
     <!-- Error Sets -->
-    {
-      errSetsList.length > 0 && (
-        <section id="sectErrSets">
-          <h2>Error Sets</h2>
-          <ul id="listErrSets" class="columns">
-            {errSetsList.map((errSet) => (
-              <li>
-                <a href={`/modules/${errSet.fqn.replace(/\./g, '/')}`}>{errSet.name}</a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )
-    }
+    {errSetsList.length > 0 && (
+      <section id="sectErrSets">
+        <h2>Error Sets</h2>
+        <ul id="listErrSets" class="columns">
+          {errSetsList.map((errSet) => (
+            <li>
+              <a href={getDeclPath(errSet.fqn)}>{errSet.name}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
 
     <!-- Functions -->
-    {
-      fnsList.length > 0 && (
-        <section id="sectFns">
-          <h2>Functions</h2>
-          <dl id="listFns">
-            {fnsList.map((fn) => (
-              <div class="decl-entry">
-                {/* fn.protoHtmlShort should contain linkified name from docParser */}
-                <dt>
-                  <a href={`/modules/${fn.fqn.replace(/\./g, '/')}`}>
-                    <code>{fn.name}</code>
-                  </a>
-                  <code set:html={fn.protoHtmlShort?.replace(fn.name, "")} />
-                </dt>
-                {/* Use short docs provided by processDeclarations */}
-                <dd class="docs-short" set:html={fn.docsShort} />
-              </div>
-            ))}
-          </dl>
-        </section>
-      )
-    }
+    {fnsList.length > 0 && (
+      <section id="sectFns">
+        <h2>Functions</h2>
+        <dl id="listFns">
+          {fnsList.map((fn) => (
+            <div class="decl-entry">
+              <dt>
+                <a href={getDeclPath(fn.fqn)}>
+                  <code>{fn.name}</code>
+                </a>
+                {/* Display rest of short proto if available */}
+                {fn.protoHtmlShort && <code set:html={fn.protoHtmlShort.replace(fn.name, '')} />}
+              </dt>
+              {/* Use short docs */}
+              {fn.docsShort && <dd class="docs-short" set:html={fn.docsShort} />}
+            </div>
+          ))}
+        </dl>
+      </section>
+    )}
 
     <!-- Global Variables & Constants -->
-    {
-      varsList.length > 0 && (
-        <section id="sectGlobalVars">
-          <h2>Global Variables & Constants</h2>
-          <table>
-            <tbody id="listGlobalVars">
-              {varsList.map((variable) => (
-                <tr>
-                  <td class="decl-name">
-                    <a href={variable.fqn ? `/modules/${variable.fqn.replace(/\./g, '/')}` : `#`}>
-                      {variable.name}
-                    </a>
-                  </td>
-                  {/* Use type HTML provided by processDeclarations */}
-                  <td class="decl-type">
-                    <code set:html={variable.typeHtml} />
-                  </td>
-                  <td class="docs-short" set:html={variable.docsShort} />
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )
-    }
+    {varsList.length > 0 && (
+      <section id="sectGlobalVars">
+        <h2>Global Variables & Constants</h2>
+        <table>
+          <tbody id="listGlobalVars">
+            {varsList.map((variable) => (
+              <tr>
+                <td class="decl-name">
+                  <a href={getDeclPath(variable.fqn)}>{variable.name}</a>
+                </td>
+                {/* Use type HTML */}
+                <td class="decl-type">
+                  {variable.typeHtml && <code set:html={variable.typeHtml} />}
+                </td>
+                {/* Use short docs */}
+                <td class="docs-short" set:html={variable.docsShort} />
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    )}
 
-    <!-- Values (Primitives, maybe Enum Values) -->
-    {
-      valsList.length > 0 && (
-        <section id="sectValues">
-          <h2>Values</h2>
-          <table>
-            <tbody id="listValues">
-              {valsList.map((value) => (
-                <tr>
-                  <td class="decl-name">
-                    <a href={`/modules/${value.fqn.replace(/\./g, '/')}`}>
-                      {value.name}
-                    </a>
-                  </td>
-                  <td class="decl-type">
-                    <code set:html={value.typeHtml} />
-                  </td>
-                  <td class="docs-short" set:html={value.docsShort} />
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )
-    }
+    <!-- Values (Primitives, etc.) -->
+    {valsList.length > 0 && (
+      <section id="sectValues">
+        <h2>Values</h2>
+        <table>
+          <tbody id="listValues">
+            {valsList.map((value) => (
+              <tr>
+                <td class="decl-name">
+                  {/* Primitives might not have unique pages, link carefully */}
+                  {value.category === DeclCategories.CAT_primitive ? (
+                     <span>{value.name}</span>
+                  ) : (
+                     <a href={getDeclPath(value.fqn)}>{value.name}</a>
+                  )}
+                </td>
+                <td class="decl-type">
+                  {value.typeHtml && <code set:html={value.typeHtml} />}
+                </td>
+                <td class="docs-short" set:html={value.docsShort} />
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    )}
 
     <!-- Fields (If the module file itself acts as a container) -->
-    {
-      moduleFieldsHtml.length > 0 && (
-        <section id="sectFields">
-          <h2>Fields</h2>
-          <div id="listFields">
-            {moduleFieldsHtml.map((field) => (
-              <div class="field-entry" set:html={field.html} />
-            ))}
-          </div>
-        </section>
-      )
-    }
+    {moduleFieldsHtml.length > 0 && (
+      <section id="sectFields">
+        <h2>Fields</h2>
+        <div id="listFields">
+          {moduleFieldsHtml.map((field) => (
+            <div class="field-entry" set:html={field.html} />
+          ))}
+        </div>
+      </section>
+    )}
   </main>
 </Layout>
 
+<!-- Styles remain the same -->
 <style>
-  /* Keep existing styles, add new ones as needed */
+/* ... existing styles ... */
   h1 {
     border-bottom: 1px dashed;
     margin: 0 0 0.5em 0;
@@ -414,16 +348,18 @@ const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
     color: #555;
     font-size: 0.9em;
   }
-  td.docs-short p {
-    /* Assuming docs might have <p> tags */
+  td.docs-short p { /* Assuming docs might have <p> tags */
     margin: 0;
   }
+  td code { font-size: 0.95em; } /* Ensure code tags in table are consistent */
+
 
   dl#listFns > div.decl-entry {
     padding: 0.5em;
     border: 1px solid #e0e0e0;
     margin-top: 0.5em;
     background-color: #fdfdfd;
+    border-radius: 3px; /* Slight rounding */
   }
   dl#listFns dt {
     font-family: "Source Code Pro", monospace;
@@ -434,6 +370,7 @@ const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
   dl#listFns dt a code {
     font-weight: bold;
   }
+   dl#listFns dt code { font-size: 0.95em; } /* Consistent code size */
   dl#listFns dd.docs-short {
     margin-left: 1em;
     font-size: 0.9em;
@@ -447,14 +384,17 @@ const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
     margin: 1em 0 2em 0; /* More space around module docs */
     line-height: 1.6;
   }
+   #tldDocs p { margin: 0.5em 0; }
 
   #listFields > .field-entry {
     /* Style fields if needed, assuming getFieldData returns appropriate HTML */
     border-bottom: 1px solid #eee;
     padding: 0.5em 0;
   }
+   #listFields > .field-entry:last-child { border-bottom: none; }
 
-  .alias-info {
+
+  .alias-info { /* Style for optional alias info */
     font-size: 0.8em;
     color: #777;
     margin-left: 0.5em;
@@ -462,31 +402,14 @@ const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
 
   /* Dark mode adjustments */
   @media (prefers-color-scheme: dark) {
-    h1 {
-      border-bottom-color: #555;
-    }
-    h2 {
-      border-bottom-color: #666;
-    }
-    #hdrName a {
-      color: #aaa;
-    }
-    #hdrName a:hover {
-      color: #fff;
-    }
-    td {
-      border-bottom-color: #333;
-    }
-    td.docs-short,
-    dd.docs-short {
-      color: #bbb;
-    }
-    dl#listFns > div.decl-entry {
-      border-color: #444;
-      background-color: #222;
-    }
-    .alias-info {
-      color: #aaa;
-    }
+    h1 { border-bottom-color: #555; }
+    h2 { border-bottom-color: #666; }
+    #hdrName a { color: #aaa; }
+    #hdrName a:hover { color: #fff; }
+    td { border-bottom-color: #333; }
+    td.docs-short, dd.docs-short { color: #bbb; }
+    dl#listFns > div.decl-entry { border-color: #444; background-color: #222; }
+    #listFields > .field-entry { border-bottom-color: #333; }
+    .alias-info { color: #aaa; }
   }
 </style>

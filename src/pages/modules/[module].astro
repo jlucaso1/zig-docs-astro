@@ -1,47 +1,124 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import { getAllModules, getModuleData, getFieldData, CAT_namespace, CAT_container, CAT_global_variable, CAT_function, CAT_primitive, CAT_error_set, CAT_global_const, CAT_alias, CAT_type, CAT_type_type, CAT_type_function } from '../../lib/docParser';
-import ModuleNav from '../../components/ModuleNav.astro';
+import Layout from "../../layouts/Layout.astro";
+import {
+  getAllModules,
+  getModuleData,
+  getFieldData,
+  CAT_namespace,
+  CAT_container,
+  CAT_global_variable,
+  CAT_function,
+  CAT_primitive,
+  CAT_error_set,
+  CAT_global_const,
+  CAT_alias,
+  CAT_type,
+  CAT_type_type,
+  CAT_type_function,
+} from "../../lib/docParser";
+import ModuleNav from "../../components/ModuleNav.astro";
 
 // Generate all module pages at build time
 export async function getStaticPaths() {
   const modules = await getAllModules();
 
-  return Promise.all(modules.map(async module => {
-    try {
-      const moduleData = await getModuleData(module.name);
-      return {
-        params: { module: module.name },
-        props: { moduleData }
-      };
-    } catch (error) {
-      console.error(`Error fetching data for module ${module.name}:`, error);
-      // Return a fallback or skip this path
-      // For now, let's skip it if data fetching fails
-      return null;
-    }
-  })).then(paths => paths.filter(p => p !== null)); // Filter out null paths
+  return Promise.all(
+    modules.map(async (module) => {
+      try {
+        const moduleData = await getModuleData(module.name);
+        return {
+          params: { module: module.name },
+          props: { moduleData: { ...moduleData, moduleName: module.name } },
+        };
+      } catch (error) {
+        console.error(`Error fetching data for module ${module.name}:`, error);
+        // Return a fallback or skip this path
+        // For now, let's skip it if data fetching fails
+        return null;
+      }
+    })
+  ).then((paths) => paths.filter((p) => p !== null)); // Filter out null paths
 }
 
 const { module } = Astro.params;
 const { moduleData } = Astro.props;
 
 // Process declarations into categories (using data from getModuleData)
-const typesList: { originalIndex: number; targetIndex: number; name: string; fqn: string; targetFqn: string; category: any; docsShort: string; typeHtml: string; protoHtmlShort: string | null; }[] = [];
-const namespacesList: { originalIndex: number; targetIndex: number; name: string; fqn: string; targetFqn: string; category: any; docsShort: string; typeHtml: string; protoHtmlShort: string | null; }[] = [];
-const errSetsList: { originalIndex: number; targetIndex: number; name: string; fqn: string; targetFqn: string; category: any; docsShort: string; typeHtml: string; protoHtmlShort: string | null; }[] = [];
-const fnsList: { originalIndex: number; targetIndex: number; name: string; fqn: string; targetFqn: string; category: any; docsShort: string; typeHtml: string; protoHtmlShort: string | null; }[] = [];
-const varsList: { originalIndex: number; targetIndex: number; name: string; fqn: string; targetFqn: string; category: any; docsShort: string; typeHtml: string; protoHtmlShort: string | null; }[] = []; // Includes global vars and consts
-const valsList: { originalIndex: number; targetIndex: number; name: string; fqn: string; targetFqn: string; category: any; docsShort: string; typeHtml: string; protoHtmlShort: string | null; }[] = []; // Includes primitives and potentially enum values if categorized differently
+const typesList: {
+  originalIndex: number;
+  targetIndex: number;
+  name: string;
+  fqn: string;
+  targetFqn: string;
+  category: any;
+  docsShort: string;
+  typeHtml: string;
+  protoHtmlShort: string | null;
+}[] = [];
+const namespacesList: {
+  originalIndex: number;
+  targetIndex: number;
+  name: string;
+  fqn: string;
+  targetFqn: string;
+  category: any;
+  docsShort: string;
+  typeHtml: string;
+  protoHtmlShort: string | null;
+}[] = [];
+const errSetsList: {
+  originalIndex: number;
+  targetIndex: number;
+  name: string;
+  fqn: string;
+  targetFqn: string;
+  category: any;
+  docsShort: string;
+  typeHtml: string;
+  protoHtmlShort: string | null;
+}[] = [];
+const fnsList: {
+  originalIndex: number;
+  targetIndex: number;
+  name: string;
+  fqn: string;
+  targetFqn: string;
+  category: any;
+  docsShort: string;
+  typeHtml: string;
+  protoHtmlShort: string | null;
+}[] = [];
+const varsList: {
+  originalIndex?: number;
+  targetIndex?: number;
+  name: any;
+  fqn?: string;
+  targetFqn?: string;
+  category?: any;
+  docsShort?: string;
+  typeHtml?: string;
+  protoHtmlShort?: string | null;
+}[] = []; // Includes global vars and consts
+const valsList: {
+  originalIndex: number;
+  targetIndex: number;
+  name: string;
+  fqn: string;
+  targetFqn: string;
+  category: any;
+  docsShort: string;
+  typeHtml: string;
+  protoHtmlShort: string | null;
+}[] = []; // Includes primitives and potentially enum values if categorized differently
 
-moduleData.declarations.forEach(decl => {
+moduleData.declarations.forEach((decl) => {
   // Note: decl.category is the category of the *target* declaration after resolving aliases
   switch (decl.category) {
     case CAT_namespace:
       namespacesList.push(decl);
       break;
     case CAT_container: // Structs, Unions, Opaque
-    case CAT_type:      // Enums might be here
+    case CAT_type: // Enums might be here
     case CAT_type_type: // 'type' itself
       typesList.push(decl);
       break;
@@ -66,12 +143,15 @@ moduleData.declarations.forEach(decl => {
       break;
     // CAT_alias should not appear here as processDeclarations resolves them
     default:
-       console.warn(`Unknown category ${decl.category} for declaration ${decl.fqn}`);
+      console.warn(
+        `Unknown category ${decl.category} for declaration ${decl.fqn}`
+      );
   }
 });
 
 // Sort lists by name (using the original alias name if applicable)
-const sortByName = (a: { name: string; }, b: { name: any; }) => a.name.localeCompare(b.name);
+const sortByName = (a: { name: string }, b: { name: any }) =>
+  a.name.localeCompare(b.name);
 typesList.sort(sortByName);
 namespacesList.sort(sortByName);
 errSetsList.sort(sortByName);
@@ -82,16 +162,17 @@ valsList.sort(sortByName);
 // Fetch field data if the module itself has fields
 let moduleFieldsHtml: any[] = [];
 if (moduleData.fields && moduleData.fields.length > 0) {
-   moduleFieldsHtml = await Promise.all(
-       moduleData.fields.map(fieldIndex => getFieldData(moduleData.rootDeclIndex, fieldIndex))
-   );
+  moduleFieldsHtml = await Promise.all(
+    moduleData.fields.map((fieldIndex) =>
+      getFieldData(moduleData.rootDeclIndex, fieldIndex)
+    )
+  );
 }
 
 // Determine the source path for the module file itself
 // Assuming module 'std.time' corresponds to a file like 'std/time.zig'
 // This logic might need refinement based on actual file structure.
-const moduleSourcePath = module.replaceAll('.', '/') + '.zig';
-
+const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
 ---
 
 <Layout title={`${module} - Zig Documentation`}>
@@ -105,258 +186,311 @@ const moduleSourcePath = module.replaceAll('.', '/') + '.zig';
     </h1>
 
     <!-- Module documentation -->
-    {moduleData.docs && <div id="tldDocs" class="docs" set:html={moduleData.docs} />}
+    {
+      moduleData.docs && (
+        <div id="tldDocs" class="docs" set:html={moduleData.docs} />
+      )
+    }
 
     <!-- Types (Structs, Enums, Unions, Type Functions) -->
-    {typesList.length > 0 && (
-      <section id="sectTypes">
-        <h2>Types</h2>
-        <ul id="listTypes" class="columns">
-          {typesList.map(type => (
-            <li>
-              {/* Link using the original FQN (which could be an alias) */}
-              <a href={`/modules/${type.fqn}`}>{type.name}</a>
-              {/* Optionally show if it's an alias: */}
-              {/* {type.originalIndex !== type.targetIndex && <span class="alias-info"> (alias for {type.targetFqn})</span>} */}
-            </li>
-          ))}
-        </ul>
-      </section>
-    )}
+    {
+      typesList.length > 0 && (
+        <section id="sectTypes">
+          <h2>Types</h2>
+          <ul id="listTypes" class="columns">
+            {typesList.map((type) => (
+              <li>
+                {/* Link using the original FQN (which could be an alias) */}
+                <a href={`/modules/${module}/${type.name}`}>{type.name}</a>
+                {/* Optionally show if it's an alias: */}
+                {/* {type.originalIndex !== type.targetIndex && <span class="alias-info"> (alias for {type.targetFqn})</span>} */}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
 
     <!-- Namespaces -->
-    {namespacesList.length > 0 && (
-      <section id="sectNamespaces">
-        <h2>Namespaces</h2>
-        <ul id="listNamespaces" class="columns">
-          {namespacesList.map(namespace => (
-            <li>
-              <a href={`/modules/${namespace.fqn}`}>{namespace.name}</a>
-               {/* {namespace.originalIndex !== namespace.targetIndex && <span class="alias-info"> (alias for {namespace.targetFqn})</span>} */}
-            </li>
-          ))}
-        </ul>
-      </section>
-    )}
+    {
+      namespacesList.length > 0 && (
+        <section id="sectNamespaces">
+          <h2>Namespaces</h2>
+          <ul id="listNamespaces" class="columns">
+            {namespacesList.map((namespace) => (
+              <li>
+                <a href={`/modules/${module}/${namespace.name}`}>{namespace.name}</a>
+                {/* {namespace.originalIndex !== namespace.targetIndex && <span class="alias-info"> (alias for {namespace.targetFqn})</span>} */}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
 
     <!-- Error Sets -->
-    {errSetsList.length > 0 && (
-      <section id="sectErrSets">
-        <h2>Error Sets</h2>
-        <ul id="listErrSets" class="columns">
-          {errSetsList.map(errSet => (
-            <li>
-              <a href={`/modules/${errSet.fqn}`}>{errSet.name}</a>
-               {/* {errSet.originalIndex !== errSet.targetIndex && <span class="alias-info"> (alias for {errSet.targetFqn})</span>} */}
-            </li>
-          ))}
-        </ul>
-      </section>
-    )}
+    {
+      errSetsList.length > 0 && (
+        <section id="sectErrSets">
+          <h2>Error Sets</h2>
+          <ul id="listErrSets" class="columns">
+            {errSetsList.map((errSet) => (
+              <li>
+                <a href={`/modules/${errSet.fqn}`}>{errSet.name}</a>
+                {/* {errSet.originalIndex !== errSet.targetIndex && <span class="alias-info"> (alias for {errSet.targetFqn})</span>} */}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
 
     <!-- Functions -->
-    {fnsList.length > 0 && (
-      <section id="sectFns">
-        <h2>Functions</h2>
-        <dl id="listFns">
-          {fnsList.map(fn => (
+    {
+      fnsList.length > 0 && (
+        <section id="sectFns">
+          <h2>Functions</h2>
+          <dl id="listFns">
+            {fnsList.map((fn) => (
               <div class="decl-entry">
-                 {/* fn.protoHtmlShort should contain linkified name from docParser */}
-                 <dt><a href={`/modules/${fn.fqn}`}><code>{fn.name}</code></a><code set:html={fn.protoHtmlShort?.replace(fn.name, '')} /></dt>
-                 {/* Use short docs provided by processDeclarations */}
-                 <dd class="docs-short" set:html={fn.docsShort} />
+                {/* fn.protoHtmlShort should contain linkified name from docParser */}
+                <dt>
+                  <a href={`/modules/${fn.fqn}`}>
+                    <code>{fn.name}</code>
+                  </a>
+                  <code set:html={fn.protoHtmlShort?.replace(fn.name, "")} />
+                </dt>
+                {/* Use short docs provided by processDeclarations */}
+                <dd class="docs-short" set:html={fn.docsShort} />
               </div>
-          ))}
-        </dl>
-      </section>
-    )}
+            ))}
+          </dl>
+        </section>
+      )
+    }
 
     <!-- Global Variables & Constants -->
-    {varsList.length > 0 && (
-      <section id="sectGlobalVars">
-        <h2>Global Variables & Constants</h2>
-        <table>
-          <tbody id="listGlobalVars">
-            {varsList.map(variable => (
+    {
+      varsList.length > 0 && (
+        <section id="sectGlobalVars">
+          <h2>Global Variables & Constants</h2>
+          <table>
+            <tbody id="listGlobalVars">
+              {varsList.map((variable) => (
                 <tr>
-                  <td class="decl-name"><a href={`/modules/${variable.fqn}`}>{variable.name}</a></td>
+                  <td class="decl-name">
+                    <a href={`/modules/${module}/${variable.name}`}>
+                      {variable.name}
+                    </a>
+                  </td>
                   {/* Use type HTML provided by processDeclarations */}
-                  <td class="decl-type"><code set:html={variable.typeHtml} /></td>
+                  <td class="decl-type">
+                    <code set:html={variable.typeHtml} />
+                  </td>
                   <td class="docs-short" set:html={variable.docsShort} />
                 </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    )}
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )
+    }
 
     <!-- Values (Primitives, maybe Enum Values) -->
-    {valsList.length > 0 && (
-      <section id="sectValues">
-        <h2>Values</h2>
-        <table>
-          <tbody id="listValues">
-            {valsList.map(value => (
-               <tr>
-                  <td class="decl-name"><a href={`/modules/${value.fqn}`}>{value.name}</a></td>
-                  <td class="decl-type"><code set:html={value.typeHtml} /></td>
+    {
+      valsList.length > 0 && (
+        <section id="sectValues">
+          <h2>Values</h2>
+          <table>
+            <tbody id="listValues">
+              {valsList.map((value) => (
+                <tr>
+                  <td class="decl-name">
+                    <a href={`/modules/${module}/${value.name}`}>
+                      {value.name}
+                    </a>
+                  </td>
+                  <td class="decl-type">
+                    <code set:html={value.typeHtml} />
+                  </td>
                   <td class="docs-short" set:html={value.docsShort} />
                 </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    )}
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )
+    }
 
     <!-- Fields (If the module file itself acts as a container) -->
-    {moduleFieldsHtml.length > 0 && (
-      <section id="sectFields">
-        <h2>Fields</h2>
-        <div id="listFields">
-          {moduleFieldsHtml.map(field => (
-            <div class="field-entry" set:html={field.html}></div>
-          ))}
-        </div>
-      </section>
-    )}
+    {
+      moduleFieldsHtml.length > 0 && (
+        <section id="sectFields">
+          <h2>Fields</h2>
+          <div id="listFields">
+            {moduleFieldsHtml.map((field) => (
+              <div class="field-entry" set:html={field.html} />
+            ))}
+          </div>
+        </section>
+      )
+    }
   </main>
 </Layout>
 
 <style>
-/* Keep existing styles, add new ones as needed */
-h1 {
-  border-bottom: 1px dashed;
-  margin: 0 0 0.5em 0;
-  padding-bottom: 0.3em;
-  font-size: 1.8em; /* Slightly larger */
-  font-weight: normal;
-}
+  /* Keep existing styles, add new ones as needed */
+  h1 {
+    border-bottom: 1px dashed;
+    margin: 0 0 0.5em 0;
+    padding-bottom: 0.3em;
+    font-size: 1.8em; /* Slightly larger */
+    font-weight: normal;
+  }
 
-h2 {
-  font-size: 1.4em;
-  margin: 1.5em 0 0.5em 0;
-  padding: 0 0 0.2em 0;
-  border-bottom: 1px solid;
-  font-weight: normal;
-}
+  h2 {
+    font-size: 1.4em;
+    margin: 1.5em 0 0.5em 0;
+    padding: 0 0 0.2em 0;
+    border-bottom: 1px solid;
+    font-weight: normal;
+  }
 
-section {
-  margin-bottom: 1.5em;
-}
+  section {
+    margin-bottom: 1.5em;
+  }
 
-#hdrName span {
-   font-family: "Source Code Pro", monospace;
-}
+  #hdrName span {
+    font-family: "Source Code Pro", monospace;
+  }
 
-#hdrName a {
-  font-size: 0.7em;
-  padding-left: 1em;
-  font-family: sans-serif;
-  font-weight: normal;
-  text-decoration: none;
-  color: #888;
-}
-#hdrName a:hover {
-  color: #000;
-}
+  #hdrName a {
+    font-size: 0.7em;
+    padding-left: 1em;
+    font-family: sans-serif;
+    font-weight: normal;
+    text-decoration: none;
+    color: #888;
+  }
+  #hdrName a:hover {
+    color: #000;
+  }
 
-ul.columns {
-  column-width: 20em;
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
-}
-
-ul.columns li {
-  padding: 0.1em 0; /* Tighter spacing */
-  overflow-wrap: break-word; /* Prevent long names overflowing */
-}
-ul.columns a {
-   font-family: "Source Code Pro", monospace;
-}
-
-table {
-  width: 100%;
-  border-spacing: 0;
-  margin-bottom: 1em;
-   table-layout: fixed; /* Prevent wide columns pushing others */
-}
-
-td {
-  text-align: left;
-  vertical-align: top;
-  margin: 0;
-  padding: 0.5em;
-   border-bottom: 1px solid #eee; /* subtle row separator */
-   overflow-wrap: break-word;
-}
-td.decl-name {
-   width: 25%;
-   font-family: "Source Code Pro", monospace;
-}
-td.decl-type {
-   width: 30%;
-}
-td.docs-short {
-   width: 45%;
-   color: #555;
-   font-size: 0.9em;
-}
-td.docs-short p { /* Assuming docs might have <p> tags */
-   margin: 0;
-}
-
-
-dl#listFns > div.decl-entry {
-  padding: 0.5em;
-  border: 1px solid #e0e0e0;
-  margin-top: 0.5em;
-  background-color: #fdfdfd;
-}
-dl#listFns dt {
-   font-family: "Source Code Pro", monospace;
-   font-size: 1.05em;
-   margin-bottom: 0.3em;
-}
-/* Separate link for name from rest of proto */
-dl#listFns dt a code {
-    font-weight: bold;
-}
-dl#listFns dd.docs-short {
-   margin-left: 1em;
-   font-size: 0.9em;
-   color: #555;
-}
-dl#listFns dd.docs-short p {
+  ul.columns {
+    column-width: 20em;
+    list-style-type: none;
     margin: 0;
-}
+    padding: 0;
+  }
 
-#tldDocs {
-  margin: 1em 0 2em 0; /* More space around module docs */
-  line-height: 1.6;
-}
+  ul.columns li {
+    padding: 0.1em 0; /* Tighter spacing */
+    overflow-wrap: break-word; /* Prevent long names overflowing */
+  }
+  ul.columns a {
+    font-family: "Source Code Pro", monospace;
+  }
 
-#listFields > .field-entry {
+  table {
+    width: 100%;
+    border-spacing: 0;
+    margin-bottom: 1em;
+    table-layout: fixed; /* Prevent wide columns pushing others */
+  }
+
+  td {
+    text-align: left;
+    vertical-align: top;
+    margin: 0;
+    padding: 0.5em;
+    border-bottom: 1px solid #eee; /* subtle row separator */
+    overflow-wrap: break-word;
+  }
+  td.decl-name {
+    width: 25%;
+    font-family: "Source Code Pro", monospace;
+  }
+  td.decl-type {
+    width: 30%;
+  }
+  td.docs-short {
+    width: 45%;
+    color: #555;
+    font-size: 0.9em;
+  }
+  td.docs-short p {
+    /* Assuming docs might have <p> tags */
+    margin: 0;
+  }
+
+  dl#listFns > div.decl-entry {
+    padding: 0.5em;
+    border: 1px solid #e0e0e0;
+    margin-top: 0.5em;
+    background-color: #fdfdfd;
+  }
+  dl#listFns dt {
+    font-family: "Source Code Pro", monospace;
+    font-size: 1.05em;
+    margin-bottom: 0.3em;
+  }
+  /* Separate link for name from rest of proto */
+  dl#listFns dt a code {
+    font-weight: bold;
+  }
+  dl#listFns dd.docs-short {
+    margin-left: 1em;
+    font-size: 0.9em;
+    color: #555;
+  }
+  dl#listFns dd.docs-short p {
+    margin: 0;
+  }
+
+  #tldDocs {
+    margin: 1em 0 2em 0; /* More space around module docs */
+    line-height: 1.6;
+  }
+
+  #listFields > .field-entry {
     /* Style fields if needed, assuming getFieldData returns appropriate HTML */
-     border-bottom: 1px solid #eee;
-     padding: 0.5em 0;
-}
+    border-bottom: 1px solid #eee;
+    padding: 0.5em 0;
+  }
 
-.alias-info {
-   font-size: 0.8em;
-   color: #777;
-   margin-left: 0.5em;
-}
+  .alias-info {
+    font-size: 0.8em;
+    color: #777;
+    margin-left: 0.5em;
+  }
 
-/* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-  h1 { border-bottom-color: #555; }
-  h2 { border-bottom-color: #666; }
-  #hdrName a { color: #aaa; }
-  #hdrName a:hover { color: #fff; }
-  td { border-bottom-color: #333; }
-  td.docs-short, dd.docs-short { color: #bbb; }
-  dl#listFns > div.decl-entry { border-color: #444; background-color: #222; }
-  .alias-info { color: #aaa; }
-}
+  /* Dark mode adjustments */
+  @media (prefers-color-scheme: dark) {
+    h1 {
+      border-bottom-color: #555;
+    }
+    h2 {
+      border-bottom-color: #666;
+    }
+    #hdrName a {
+      color: #aaa;
+    }
+    #hdrName a:hover {
+      color: #fff;
+    }
+    td {
+      border-bottom-color: #333;
+    }
+    td.docs-short,
+    dd.docs-short {
+      color: #bbb;
+    }
+    dl#listFns > div.decl-entry {
+      border-color: #444;
+      background-color: #222;
+    }
+    .alias-info {
+      color: #aaa;
+    }
+  }
 </style>

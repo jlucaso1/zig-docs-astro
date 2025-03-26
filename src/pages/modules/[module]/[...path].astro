@@ -1,7 +1,6 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import { getDeclData, getParamData, getFieldData, getErrorData, processDeclarations, CAT_namespace, CAT_container, CAT_global_variable, CAT_function, CAT_primitive, CAT_error_set, CAT_global_const, CAT_alias, CAT_type, CAT_type_type, CAT_type_function, getAllDeclarations } from '../../../lib/docParser';
-import ModuleNav from '../../../components/ModuleNav.astro'; // Use ModuleNav for consistency
 
 // This generates all declaration pages at build time
 export async function getStaticPaths() {
@@ -79,7 +78,10 @@ if (declData.members && declData.members.length > 0) {
 // Simple breadcrumb based on FQN - could be improved
 const fqnParts = declData.fqn.split('.');
 const breadcrumbs = fqnParts.map((part: any, index: number) => {
-    const currentPath = fqnParts.slice(0, index + 1).join('.');
+    const currentPath = fqnParts.slice(0, index + 1).join('/');
+    console.log(part)
+    console.log(currentPath)
+    console.log(fqnParts)
     return {
         name: part,
         href: `/modules/${currentPath}`,
@@ -111,7 +113,7 @@ const breadcrumbs = fqnParts.map((part: any, index: number) => {
       {/* Link to source using filePath from declData */}
       <a href={`/src/${declData.filePath}#L1`} target="_blank" title="View source">[src]</a> {/* Add target blank for source */}
     </h1>
-     {declData.isAlias && <p class="alias-note">Alias for <a href={`/modules/${declData.targetFqn}`}>{declData.targetFqn}</a></p>}
+     {declData.isAlias && <p class="alias-note">Alias for <a href={`/modules/${module}/${declData.name}`}>{declData.targetFqn}</a></p>}
 
 
     <!-- Full Documentation -->

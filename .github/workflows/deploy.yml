@@ -16,8 +16,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      SITE_URL: 'https://jlucaso1.github.io'
-      BASE_PATH: /zig-docs-astro
+      SITE: 'https://jlucaso1.github.io'
+      BASE_URL: /zig-docs-astro
       HIDE_SOURCES: true # Set to true to hide the source code in page details
     steps:
       - name: Checkout repository

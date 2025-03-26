@@ -1,0 +1,360 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { getDeclData, getParamData, getFieldData, getErrorData, processDeclarations, CAT_namespace, CAT_container, CAT_global_variable, CAT_function, CAT_primitive, CAT_error_set, CAT_global_const, CAT_alias, CAT_type, CAT_type_type, CAT_type_function, getAllDeclarations } from '../../../lib/docParser';
+import ModuleNav from '../../../components/ModuleNav.astro'; // Use ModuleNav for consistency
+
+// This generates all declaration pages at build time
+export async function getStaticPaths() {
+  // Re-use getAllDeclarations - CAUTION: potentially very large/slow
+  // Consider generating paths only for top-level module members initially
+  // Or find a more efficient way via WASM if possible
+  console.log("Generating static paths for all declarations...");
+  const declarations = await getAllDeclarations();
+  console.log(`Found ${declarations.length} declarations to generate paths for.`);
+
+  const paths = [];
+  for (const decl of declarations) {
+    // Skip if fqn is missing (shouldn't happen often)
+    if (!decl.fqn) {
+        console.warn(`Skipping declaration with missing FQN (Index: ${decl.originalIndex})`);
+        continue;
+    }
+    try {
+        // Pre-fetch data for props. This ensures pages only build if data is valid.
+        // Note: This calls getDeclData for *every* declaration during build, which can be slow.
+        const declData = await getDeclData(decl.fqn); // Fetch by FQN
+        paths.push({
+            params: {
+                // Module part can be derived from fqn, e.g., 'std' from 'std.time.Instant'
+                // Or pass it down from getAllDeclarations if it includes module context
+                module: decl.fqn.split('.')[0], // Simplistic assumption
+                path: decl.fqn.substring(decl.fqn.indexOf('.') + 1) // Rest of the path
+            },
+            props: { declData }
+        });
+    } catch (error) {
+        console.error(`Error fetching data for declaration ${decl.fqn}:`, error);
+        // Skip generating page for this declaration if data fetch fails
+    }
+  }
+  console.log(`Successfully prepared ${paths.length} paths.`);
+  return paths;
+}
+
+const { module, path: declPath } = Astro.params; // path is reserved, use declPath
+const { declData } = Astro.props; // Receive pre-fetched data
+
+// Fetch related data needed for rendering (params, fields, errors, nested members)
+let paramsHtml = [];
+if (declData.params && declData.params.length > 0) {
+    paramsHtml = await Promise.all(
+        declData.params.map((paramIndex: number) => getParamData(declData.index, paramIndex))
+    );
+}
+
+let fieldsHtml = [];
+if (declData.fields && declData.fields.length > 0) {
+    fieldsHtml = await Promise.all(
+        declData.fields.map((fieldIndex: number) => getFieldData(declData.index, fieldIndex))
+    );
+}
+
+let errorsHtml = [];
+if (declData.errorSetNodes && declData.errorSetNodes.length > 0) {
+     // Need the baseDecl index relative to which errors are defined
+     const baseDecl = declData.errorSetBaseDecl ?? declData.index; // Use self if base not specified
+     errorsHtml = await Promise.all(
+         declData.errorSetNodes.map((errorNode: bigint) => getErrorData(baseDecl, errorNode))
+     );
+}
+
+// Process nested members if this is a namespace or container type
+let nestedDeclarations: any[] = [];
+if (declData.members && declData.members.length > 0) {
+   // Re-use processDeclarations helper from docParser
+   nestedDeclarations = processDeclarations(declData.members);
+   // Can further categorize nestedDeclarations here if needed (like on module page)
+}
+
+// Simple breadcrumb based on FQN - could be improved
+const fqnParts = declData.fqn.split('.');
+const breadcrumbs = fqnParts.map((part: any, index: number) => {
+    const currentPath = fqnParts.slice(0, index + 1).join('.');
+    return {
+        name: part,
+        href: `/modules/${currentPath}`,
+        isCurrent: index === fqnParts.length - 1
+    };
+});
+
+---
+
+<Layout title={`${declData.name} (${declData.categoryName}) - Zig Documentation`}>
+  <main>
+    <!-- Breadcrumb Navigation -->
+    <div id="sectNav">
+      <ul id="listNav">
+         <li><a href="/modules">Modules</a></li>
+         {breadcrumbs.map((crumb: { href: string | URL | null | undefined; isCurrent: any; name: unknown; }) => (
+           <li>
+             <a href={crumb.href} class:list={{ active: crumb.isCurrent }}>
+               {crumb.name}
+             </a>
+           </li>
+         ))}
+      </ul>
+    </div>
+
+    <!-- Declaration Header -->
+    <h1 id="hdrName">
+      <span>{declData.categoryName} {declData.name}</span>
+      {/* Link to source using filePath from declData */}
+      <a href={`/src/${declData.filePath}#L1`} target="_blank" title="View source">[src]</a> {/* Add target blank for source */}
+    </h1>
+     {declData.isAlias && <p class="alias-note">Alias for <a href={`/modules/${declData.targetFqn}`}>{declData.targetFqn}</a></p>}
+
+
+    <!-- Full Documentation -->
+    {declData.docs && <div id="tldDocs" class="docs" set:html={declData.docs}></div>}
+
+    <!-- Function/Type Function Specifics -->
+    {(declData.category === CAT_function || declData.category === CAT_type_function) && (
+      <>
+        {declData.protoHtml && (
+          <section id="sectFnProto">
+            <h2>Prototype</h2>
+            <div class="fn-proto">
+              <pre><code><Fragment set:html={declData.protoHtml} /></code></pre>
+            </div>
+          </section>
+        )}
+
+        {paramsHtml.length > 0 && (
+          <section id="sectParams">
+            <h2>Parameters</h2>
+            <div id="listParams">
+              {paramsHtml.map((param) => (
+                <div class="param-entry" set:html={param.html}></div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {errorsHtml.length > 0 && (
+          <section id="sectFnErrors">
+             <h2>Possible Errors</h2>
+             {/* Check if there's an 'anyerror' indication */}
+             {/* <div id="fnErrorsAnyError">...</div> */}
+             <div id="tableFnErrors"> {/* Using div instead of table for simplicity */}
+                 {errorsHtml.map((error) => (
+                    <div class="error-entry" set:html={error.html}></div>
+                 ))}
+             </div>
+          </section>
+        )}
+
+        {declData.doctestHtml && (
+          <section id="sectDocTests">
+            <h2>Example</h2>
+            <div class="doctest">
+               <pre><code><Fragment set:html={declData.doctestHtml} /></code></pre>
+            </div>
+          </section>
+        )}
+      </>
+    )}
+
+    <!-- Container/Type/Namespace Specifics (Fields & Members) -->
+    {(declData.category === CAT_container || declData.category === CAT_type || declData.category === CAT_namespace) && (
+      <>
+        {fieldsHtml.length > 0 && (
+          <section id="sectFields">
+            <h2>Fields</h2>
+            <div id="listFields">
+              {fieldsHtml.map((field) => (
+                <div class="field-entry" set:html={field.html}></div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Render nested declarations if any */}
+        {nestedDeclarations.length > 0 && (
+           <section id="sectMembers">
+              <h2>Members</h2>
+              {/* Basic list for now, could categorize like module page */}
+              <ul class="nested-list columns">
+                 {nestedDeclarations.map(member => (
+                    <li>
+                       <a href={`/modules/${member.fqn}`}>{member.name}</a>
+                       <span class="nested-category"> ({member.categoryName})</span> {/* Add helper for category name */}
+                    </li>
+                 ))}
+              </ul>
+           </section>
+        )}
+
+         {/* Doc tests might apply to types too */}
+         {declData.doctestHtml && ! (declData.category === CAT_function || declData.category === CAT_type_function) && (
+          <section id="sectDocTests">
+            <h2>Example</h2>
+            <div class="doctest">
+               <pre><code><Fragment set:html={declData.doctestHtml} /></code></pre>
+            </div>
+          </section>
+        )}
+      </>
+    )}
+
+     <!-- Error Set Specifics -->
+     {declData.category === CAT_error_set && errorsHtml.length > 0 && (
+        <section id="sectErrSetErrors">
+           <h2>Errors</h2>
+           <div id="listErrSetErrors">
+              {errorsHtml.map((error) => (
+                 <div class="error-entry" set:html={error.html}></div>
+              ))}
+           </div>
+        </section>
+     )}
+
+     <!-- Variable/Constant Specifics -->
+     {(declData.category === CAT_global_variable || declData.category === CAT_global_const) && declData.typeHtml && (
+        <section id="sectVarType">
+           <h2>Type</h2>
+           <p><Fragment set:html={declData.typeHtml} /></p>
+        </section>
+     )}
+
+
+    <!-- Source Code Section (Always show if available) -->
+    {declData.sourceHtml && (
+      <section id="sectSource">
+        <h2>Source</h2>
+        <div class="source-code">
+          <pre><code><Fragment set:html={declData.sourceHtml} /></code></pre>
+        </div>
+      </section>
+    )}
+
+  </main>
+</Layout>
+
+<style>
+  /* Re-use styles from [module].astro where applicable */
+  h1 {
+    border-bottom: 1px dashed;
+    margin: 0 0 0.5em 0;
+    padding-bottom: 0.3em;
+    font-size: 1.8em;
+    font-weight: normal;
+  }
+  h1 span { font-family: "Source Code Pro", monospace; }
+  h1 a { font-size: 0.7em; padding-left: 1em; font-family: sans-serif; font-weight: normal; text-decoration: none; color: #888; }
+  h1 a:hover { color: #000; }
+
+  .alias-note {
+      font-style: italic;
+      color: #666;
+      margin: -0.5em 0 1em 0;
+      font-size: 0.9em;
+  }
+  .alias-note a { color: #444; }
+
+  h2 {
+    font-size: 1.4em;
+    margin: 1.5em 0 0.5em 0;
+    padding: 0 0 0.2em 0;
+    border-bottom: 1px solid;
+    font-weight: normal;
+  }
+
+  section {
+    margin-bottom: 1.5em;
+  }
+
+  #tldDocs { margin: 1em 0 2em 0; line-height: 1.6; }
+  .docs p { margin: 0.5em 0; } /* Basic paragraph spacing */
+
+  /* Function Proto / Source Code */
+  .fn-proto, .doctest, .source-code {
+    background-color: #f8f8f8;
+    border: 1px solid #e8e8e8;
+    padding: 0.5em 1em;
+    overflow-x: auto;
+    margin-top: 0.5em;
+  }
+  pre { margin: 0; }
+  code { font-family: "Source Code Pro", monospace; font-size: 0.95em; }
+
+  /* Params, Fields, Errors */
+  #listParams > .param-entry,
+  #listFields > .field-entry,
+  #tableFnErrors > .error-entry, /* Style individual errors */
+  #listErrSetErrors > .error-entry {
+     border-bottom: 1px solid #eee;
+     padding: 0.8em 0.5em;
+     line-height: 1.5;
+  }
+   #listParams > .param-entry:last-child,
+   #listFields > .field-entry:last-child,
+   #tableFnErrors > .error-entry:last-child,
+   #listErrSetErrors > .error-entry:last-child {
+       border-bottom: none;
+   }
+   /* Assuming HTML from WASM contains structure like name, type, docs */
+   /* Add more specific styles based on the actual HTML generated */
+
+  /* Nested Members List */
+  ul.nested-list {
+     column-width: 20em;
+     list-style-type: none;
+     margin: 0;
+     padding: 0;
+   }
+   ul.nested-list li { padding: 0.1em 0; overflow-wrap: break-word; }
+   ul.nested-list a { font-family: "Source Code Pro", monospace; }
+   .nested-category { font-size: 0.85em; color: #777; margin-left: 0.5em; }
+
+
+  /* Breadcrumbs */
+  #listNav {
+    list-style-type: none;
+    margin: 0.5em 0 1em 0; /* Added bottom margin */
+    padding: 0;
+    overflow: hidden;
+    background-color: #f1f1f1;
+    border-radius: 4px; /* Slight rounding */
+  }
+  #listNav li { float: left; }
+  #listNav li a { display: block; color: #000; text-align: center; padding: .5em .8em; text-decoration: none; }
+  #listNav li:not(:last-child)::after { /* Add separators */
+      content: '/';
+      padding: 0 0.2em;
+      color: #888;
+  }
+  #listNav li a:hover { background-color: #ddd; }
+  #listNav li a.active { background-color: #FFBB4D; color: #000; font-weight: bold; }
+
+  /* Dark mode */
+  @media (prefers-color-scheme: dark) {
+    h1 { border-bottom-color: #555; }
+    h1 a { color: #aaa; }
+    h1 a:hover { color: #fff; }
+    .alias-note { color: #aaa; }
+    .alias-note a { color: #ccc; }
+    h2 { border-bottom-color: #666; }
+    .fn-proto, .doctest, .source-code { background-color: #222; border-color: #444; }
+    #listParams > .param-entry,
+    #listFields > .field-entry,
+    #tableFnErrors > .error-entry,
+    #listErrSetErrors > .error-entry { border-bottom-color: #333; }
+    .nested-category { color: #aaa; }
+
+    #listNav { background-color: #333; }
+    #listNav li a { color: #eee; }
+    #listNav li:not(:last-child)::after { color: #777; }
+    #listNav li a:hover { background-color: #444; }
+    #listNav li a.active { background-color: #FFBB4D; color: #000; }
+  }
+</style>

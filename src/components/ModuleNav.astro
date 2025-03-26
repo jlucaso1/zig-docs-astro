@@ -1,0 +1,72 @@
+---
+const { moduleName } = Astro.props;
+
+// Format the breadcrumb path
+const parts = moduleName.split('.');
+---
+
+<div id="sectNav">
+  <ul id="listNav">
+    <li><a href="/modules">Modules</a></li>
+    {parts.map((part: unknown, index: number) => {
+      const path = parts.slice(0, index + 1).join('.');
+      return (
+        <li>
+          <a 
+            href={`/modules/${path}`} 
+            class={index === parts.length - 1 ? 'active' : ''}
+          >
+            {part}
+          </a>
+        </li>
+      );
+    })}
+  </ul>
+</div>
+
+<style>
+  #listNav {
+    list-style-type: none;
+    margin: 0.5em 0 0 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #f1f1f1;
+  }
+  
+  #listNav li {
+    float: left;
+  }
+  
+  #listNav li a {
+    display: block;
+    color: #000;
+    text-align: center;
+    padding: .5em .8em;
+    text-decoration: none;
+  }
+  
+  #listNav li a:hover {
+    background-color: #555;
+    color: #fff;
+  }
+  
+  #listNav li a.active {
+    background-color: #FFBB4D;
+    color: #000;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    #listNav {
+      background-color: #333;
+    }
+    
+    #listNav li a {
+      color: #fff;
+    }
+    
+    #listNav li a.active {
+      background-color: #FFBB4D;
+      color: #000;
+    }
+  }
+</style>

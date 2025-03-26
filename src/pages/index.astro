@@ -1,11 +1,68 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import Layout from "../layouts/Layout.astro";
+import { getAllModules } from "../lib/docParser";
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+
+// Get all modules at build time
+const modules = await getAllModules();
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="Modules - Zig Documentation">
+  <main>
+    <h1>Zig Standard Library Modules</h1>
+    
+    <div class="modules-container">
+      <ul class="module-list">
+        {modules.map(module => (
+          <li>
+            <a href={`/modules/${module.name}`}>
+              <span class="module-name">{module.name}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </main>
 </Layout>
+
+<style>
+  .modules-container {
+    margin: 2rem 0;
+  }
+  
+  .module-list {
+    list-style-type: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  
+  .module-list li {
+    background-color: #f5f5f5;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+  }
+  
+  .module-list li:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .module-list a {
+    display: block;
+    padding: 1rem;
+    color: #2A6286;
+    text-decoration: none;
+    font-family: "Source Code Pro", monospace;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .module-list li {
+      background-color: #222;
+    }
+    
+    .module-list li:hover {
+      background-color: #333;
+    }
+  }
+</style>

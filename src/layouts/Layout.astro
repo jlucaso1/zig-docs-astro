@@ -1,22 +1,35 @@
-<!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
-	</head>
-	<body>
-		<slot />
-	</body>
-</html>
+---
+interface Props {
+  title: string;
+}
 
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
-</style>
+const { title } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <nav>
+      <!-- Navigation similar to zig.org -->
+      <a class="logo" href="/">
+        <!-- SVG logo here -->
+      </a>
+      <div id="navWrap">
+        <input type="search" id="search" autocomplete="off" 
+               spellcheck="false" placeholder="Search documentation...">
+        <div id="sectNav"><ul id="listNav"></ul></div>
+      </div>
+    </nav>
+    <slot />
+    <script>
+      // Minimal client-side JS only for interactive features
+      // like search functionality
+    </script>
+  </body>
+</html>

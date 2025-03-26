@@ -1,0 +1,70 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { CAT_function, getAllDeclarations, getDeclData, unwrapString, wasmExports } from '../../lib/docParser';
+
+
+export async function getStaticPaths() {
+  const declarations = await getAllDeclarations();
+  
+  return declarations.map(decl => ({
+    params: { 
+      path: decl.fqn 
+    },
+    props: { 
+      declIndex: decl.index 
+    }
+  }));
+}
+
+const { declIndex } = Astro.props;
+const declData = await getDeclData(declIndex);
+---
+
+<Layout title={`${declData.name} - Zig Documentation`}>
+  <div id="sectNav">
+    <ul id="listNav">
+      <!-- Create navigation breadcrumbs -->
+    </ul>
+  </div>
+  
+  <h1 id="hdrName">
+    <span>{declData.categoryName} {declData.name}</span>
+    <a href={`/src/${declData.filePath}`}>[src]</a>
+  </h1>
+  
+  <!-- Render documentation based on category -->
+  {declData.docs && <div class="docs" set:html={declData.docs}></div>}
+  
+  {declData.category === CAT_function && (
+    <>
+      <div class="fn-proto">
+        <pre><code set:html={declData.protoHtml}></code></pre>
+      </div>
+      
+      {declData.params?.length > 0 && (
+        <div id="sectParams">
+          <h2>Parameters</h2>
+          <div id="listParams">
+            {declData.params.map((paramIndex) => (
+              <div set:html={unwrapString(wasmExports.decl_param_html(declIndex, paramIndex))}></div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {declData.doctestHtml && (
+        <div id="sectDocTests">
+          <h2>Example Usage</h2>
+          <pre><code set:html={declData.doctestHtml}></code></pre>
+        </div>
+      )}
+    </>
+  )}
+  
+  <!-- Add more conditional rendering based on category -->
+  
+  <div id="sectSource">
+    <h2>Source Code</h2>
+    <pre><code set:html={declData.sourceHtml}></code></pre>
+  </div>
+</Layout>

@@ -1,0 +1,1528 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+The content has been processed where content has been compressed (code blocks are separated by ⋮---- delimiter).
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Content has been compressed - code blocks are separated by ⋮---- delimiter
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+<additional_info>
+
+</additional_info>
+
+</file_summary>
+
+<directory_structure>
+public/
+  favicon.svg
+scripts/
+  generate-content.ts
+  originalBrowserScript.js
+src/
+  components/
+    ModuleNav.astro
+  content/
+    config.ts
+  layouts/
+    Layout.astro
+  lib/
+    docParser.ts
+    sourceParser.ts
+  pages/
+    modules/
+      [module]/
+        [...path].astro
+      [module].astro
+    src/
+      [...path].astro
+    index.astro
+.gitignore
+astro.config.mjs
+package.json
+README.md
+tsconfig.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="scripts/generate-content.ts">
+import { initWasm, getAllDeclarations } from '../src/lib/docParser';
+import fs from 'fs/promises';
+import path from 'path';
+⋮----
+async function generateContent()
+⋮----
+// Ensure content directory exists
+⋮----
+// Generate content files
+</file>
+
+<file path="scripts/originalBrowserScript.js">
+const domDocTestsCode = document.getElementById("docTestsCode");
+const domFnErrorsAnyError = document.getElementById("fnErrorsAnyError");
+const domFnProto = document.getElementById("fnProto");
+const domFnProtoCode = document.getElementById("fnProtoCode");
+const domHdrName = document.getElementById("hdrName");
+const domHelpModal = document.getElementById("helpDialog");
+const domListErrSets = document.getElementById("listErrSets");
+const domListFields = document.getElementById("listFields");
+const domListParams = document.getElementById("listParams");
+const domListFnErrors = document.getElementById("listFnErrors");
+const domListFns = document.getElementById("listFns");
+const domListGlobalVars = document.getElementById("listGlobalVars");
+const domListInfo = document.getElementById("listInfo");
+const domListNamespaces = document.getElementById("listNamespaces");
+const domListNav = document.getElementById("listNav");
+const domListSearchResults = document.getElementById("listSearchResults");
+const domListTypes = document.getElementById("listTypes");
+const domListValues = document.getElementById("listValues");
+const domSearch = document.getElementById("search");
+const domSectDocTests = document.getElementById("sectDocTests");
+const domSectErrSets = document.getElementById("sectErrSets");
+const domSectFields = document.getElementById("sectFields");
+const domSectParams = document.getElementById("sectParams");
+const domSectFnErrors = document.getElementById("sectFnErrors");
+const domSectFns = document.getElementById("sectFns");
+const domSectGlobalVars = document.getElementById("sectGlobalVars");
+const domSectNamespaces = document.getElementById("sectNamespaces");
+const domSectNav = document.getElementById("sectNav");
+const domSectSearchNoResults = document.getElementById("sectSearchNoResults");
+const domSectSearchResults = document.getElementById("sectSearchResults");
+const domSectSource = document.getElementById("sectSource");
+const domSectTypes = document.getElementById("sectTypes");
+const domSectValues = document.getElementById("sectValues");
+const domSourceText = document.getElementById("sourceText");
+const domStatus = document.getElementById("status");
+const domTableFnErrors = document.getElementById("tableFnErrors");
+const domTldDocs = document.getElementById("tldDocs");
+const domErrors = document.getElementById("errors");
+const domErrorsText = document.getElementById("errorsText");
+⋮----
+// 0 = home
+// 1 = decl (decl)
+// 2 = source (path)
+⋮----
+// unsigned int: decl index
+⋮----
+// string file name matching tarball path
+⋮----
+// when this is populated, pressing the "view source" command will
+// navigate to this hash.
+⋮----
+// names of modules in the same order as wasm
+⋮----
+let wasm_promise = fetch("main.wasm");
+let sources_promise = fetch("sources.tar").then(function(response) {
+if (!response.ok) throw new Error("unable to download sources");
+return response.arrayBuffer();
+⋮----
+const text_decoder = new TextDecoder();
+const text_encoder = new TextEncoder();
+⋮----
+WebAssembly.instantiateStreaming(wasm_promise, {
+⋮----
+const msg = decodeString(ptr, len);
+⋮----
+console.error(msg);
+⋮----
+domErrors.classList.remove("hidden");
+⋮----
+console.warn(msg);
+⋮----
+console.info(msg);
+⋮----
+console.debug(msg);
+⋮----
+}).then(function(obj) {
+⋮----
+window.wasm = obj; // for debugging
+⋮----
+sources_promise.then(function(buffer) {
+const js_array = new Uint8Array(buffer);
+const ptr = wasm_exports.alloc(js_array.length);
+const wasm_array = new Uint8Array(wasm_exports.memory.buffer, ptr, js_array.length);
+wasm_array.set(js_array);
+wasm_exports.unpack(ptr, js_array.length);
+⋮----
+updateModuleList();
+⋮----
+window.addEventListener('popstate', onPopState, false);
+domSearch.addEventListener('keydown', onSearchKeyDown, false);
+domSearch.addEventListener('input', onSearchChange, false);
+window.addEventListener('keydown', onWindowKeyDown, false);
+onHashChange(null);
+⋮----
+function renderTitle() {
+⋮----
+document.title = fullyQualifiedName(curNav.decl) + suffix;
+⋮----
+document.title = moduleList[0] + suffix; // Home
+⋮----
+function render() {
+domFnErrorsAnyError.classList.add("hidden");
+domFnProto.classList.add("hidden");
+domHdrName.classList.add("hidden");
+domHelpModal.classList.add("hidden");
+domSectErrSets.classList.add("hidden");
+domSectDocTests.classList.add("hidden");
+domSectFields.classList.add("hidden");
+domSectParams.classList.add("hidden");
+domSectFnErrors.classList.add("hidden");
+domSectFns.classList.add("hidden");
+domSectGlobalVars.classList.add("hidden");
+domSectNamespaces.classList.add("hidden");
+domSectNav.classList.add("hidden");
+domSectSearchNoResults.classList.add("hidden");
+domSectSearchResults.classList.add("hidden");
+domSectSource.classList.add("hidden");
+domSectTypes.classList.add("hidden");
+domSectValues.classList.add("hidden");
+domStatus.classList.add("hidden");
+domTableFnErrors.classList.add("hidden");
+domTldDocs.classList.add("hidden");
+⋮----
+renderTitle();
+⋮----
+if (curNavSearch !== "") return renderSearch();
+⋮----
+case 0: return renderHome();
+⋮----
+return renderNotFound();
+⋮----
+return renderDecl(curNav.decl);
+⋮----
+case 2: return renderSource(curNav.path);
+default: throw new Error("invalid navigation state");
+⋮----
+function renderHome() {
+⋮----
+domStatus.classList.remove("hidden");
+⋮----
+return renderModule(0);
+⋮----
+function renderModule(pkg_index) {
+const root_decl = wasm_exports.find_module_root(pkg_index);
+return renderDecl(root_decl);
+⋮----
+function renderDecl(decl_index) {
+const category = wasm_exports.categorize_decl(decl_index, 0);
+⋮----
+return renderNamespacePage(decl_index);
+⋮----
+return renderGlobal(decl_index);
+⋮----
+return renderFunction(decl_index);
+⋮----
+return renderTypeFunction(decl_index);
+⋮----
+return renderErrorSetPage(decl_index);
+⋮----
+return renderDecl(wasm_exports.get_aliasee());
+⋮----
+throw new Error("unrecognized category " + category);
+⋮----
+function renderSource(path) {
+const decl_index = findFileRoot(path);
+if (decl_index == null) return renderNotFound();
+⋮----
+renderNavFancy(decl_index, [{
+⋮----
+domSourceText.innerHTML = declSourceHtml(decl_index);
+⋮----
+domSectSource.classList.remove("hidden");
+⋮----
+function renderDeclHeading(decl_index) {
+curNav.viewSourceHash = "#src/" + unwrapString(wasm_exports.decl_file_path(decl_index));
+⋮----
+hdrNameSpan.innerText = unwrapString(wasm_exports.decl_category_name(decl_index));
+srcLink.setAttribute('href', curNav.viewSourceHash);
+domHdrName.classList.remove("hidden");
+⋮----
+renderTopLevelDocs(decl_index);
+⋮----
+function renderTopLevelDocs(decl_index) {
+const tld_docs_html = unwrapString(wasm_exports.decl_docs_html(decl_index, false));
+⋮----
+domTldDocs.classList.remove("hidden");
+⋮----
+function renderNav(cur_nav_decl, list) {
+return renderNavFancy(cur_nav_decl, []);
+⋮----
+function renderNavFancy(cur_nav_decl, list) {
+⋮----
+// First, walk backwards the decl parents within a file.
+⋮----
+list.push({
+name: declIndexName(decl_it),
+href: navLinkDeclIndex(decl_it),
+⋮----
+decl_it = declParent(decl_it);
+⋮----
+// Next, walk backwards the file path segments.
+⋮----
+const file_path = fullyQualifiedName(prev_decl_it);
+const parts = file_path.split(".");
+parts.pop(); // skip last
+⋮----
+const href = navLinkFqn(parts.join("."));
+const part = parts.pop();
+⋮----
+list.reverse();
+⋮----
+resizeDomList(domListNav, list.length, '<li><a href="#"></a></li>');
+⋮----
+aDom.setAttribute('href', list[i].href);
+⋮----
+aDom.classList.add("active");
+⋮----
+aDom.classList.remove("active");
+⋮----
+domSectNav.classList.remove("hidden");
+⋮----
+function renderNotFound() {
+⋮----
+function navLinkFqn(full_name) {
+⋮----
+function navLinkDeclIndex(decl_index) {
+return navLinkFqn(fullyQualifiedName(decl_index));
+⋮----
+function resizeDomList(listDom, desiredLen, templateHtml) {
+// add the missing dom entries
+⋮----
+listDom.insertAdjacentHTML('beforeend', templateHtml);
+⋮----
+// remove extra dom entries
+⋮----
+listDom.removeChild(listDom.lastChild);
+⋮----
+function renderErrorSetPage(decl_index) {
+renderNav(decl_index);
+renderDeclHeading(decl_index);
+⋮----
+const errorSetList = declErrorSet(decl_index).slice();
+renderErrorSet(decl_index, errorSetList);
+⋮----
+function renderErrorSet(base_decl, errorSetList) {
+⋮----
+domFnErrorsAnyError.classList.remove("hidden");
+⋮----
+resizeDomList(domListFnErrors, errorSetList.length, '<div></div>');
+⋮----
+const html = unwrapString(wasm_exports.error_html(base_decl, errorSetList[i]));
+⋮----
+domTableFnErrors.classList.remove("hidden");
+⋮----
+domSectFnErrors.classList.remove("hidden");
+⋮----
+function renderParams(decl_index) {
+// Prevent params from being emptied next time wasm calls memory.grow.
+const params = declParams(decl_index).slice();
+⋮----
+resizeDomList(domListParams, params.length, '<div></div>');
+⋮----
+divDom.innerHTML = unwrapString(wasm_exports.decl_param_html(decl_index, params[i]));
+⋮----
+domSectParams.classList.remove("hidden");
+⋮----
+function renderTypeFunction(decl_index) {
+⋮----
+renderParams(decl_index);
+renderDocTests(decl_index);
+⋮----
+const members = unwrapSlice32(wasm_exports.type_fn_members(decl_index, false)).slice();
+const fields = unwrapSlice32(wasm_exports.type_fn_fields(decl_index)).slice();
+⋮----
+renderNamespace(decl_index, members, fields);
+⋮----
+function renderDocTests(decl_index) {
+const doctest_html = declDoctestHtml(decl_index);
+⋮----
+domSectDocTests.classList.remove("hidden");
+⋮----
+function renderFunction(decl_index) {
+⋮----
+domFnProtoCode.innerHTML = fnProtoHtml(decl_index, false);
+domFnProto.classList.remove("hidden");
+⋮----
+const errorSetNode = fnErrorSet(decl_index);
+⋮----
+const base_decl = wasm_exports.fn_error_set_decl(decl_index, errorSetNode);
+renderErrorSet(base_decl, errorSetNodeList(decl_index, errorSetNode));
+⋮----
+function renderGlobal(decl_index) {
+⋮----
+const docs_html = declDocsHtmlShort(decl_index);
+⋮----
+function renderNamespace(base_decl, members, fields) {
+⋮----
+const member_category = wasm_exports.categorize_decl(member, 0);
+⋮----
+namespacesList.push({original: original, member: member});
+⋮----
+typesList.push({original: original, member: member});
+⋮----
+varsList.push(member);
+⋮----
+fnsList.push(member);
+⋮----
+errSetsList.push({original: original, member: member});
+⋮----
+valsList.push({original: original, member: member});
+⋮----
+member = wasm_exports.get_aliasee();
+⋮----
+throw new Error("uknown category: " + member_category);
+⋮----
+typesList.sort(byDeclIndexName2);
+namespacesList.sort(byDeclIndexName2);
+errSetsList.sort(byDeclIndexName2);
+fnsList.sort(byDeclIndexName);
+varsList.sort(byDeclIndexName);
+valsList.sort(byDeclIndexName2);
+⋮----
+resizeDomList(domListTypes, typesList.length, '<li><a href="#"></a></li>');
+⋮----
+aDom.textContent = declIndexName(original_decl);
+aDom.setAttribute('href', navLinkDeclIndex(decl));
+⋮----
+domSectTypes.classList.remove("hidden");
+⋮----
+resizeDomList(domListNamespaces, namespacesList.length, '<li><a href="#"></a></li>');
+⋮----
+domSectNamespaces.classList.remove("hidden");
+⋮----
+resizeDomList(domListErrSets, errSetsList.length, '<li><a href="#"></a></li>');
+⋮----
+domSectErrSets.classList.remove("hidden");
+⋮----
+resizeDomList(domListFns, fnsList.length,
+⋮----
+protoCodeDom.innerHTML = fnProtoHtml(decl, true);
+ddDocs.innerHTML = declDocsHtmlShort(decl);
+⋮----
+domSectFns.classList.remove("hidden");
+⋮----
+resizeDomList(domListFields, fields.length, '<div></div>');
+⋮----
+divDom.innerHTML = unwrapString(wasm_exports.decl_field_html(base_decl, fields[i]));
+⋮----
+domSectFields.classList.remove("hidden");
+⋮----
+resizeDomList(domListGlobalVars, varsList.length,
+⋮----
+tdNameA.setAttribute('href', navLinkDeclIndex(decl));
+tdNameA.textContent = declIndexName(decl);
+⋮----
+tdType.innerHTML = declTypeHtml(decl);
+tdDesc.innerHTML = declDocsHtmlShort(decl);
+⋮----
+domSectGlobalVars.classList.remove("hidden");
+⋮----
+resizeDomList(domListValues, valsList.length,
+⋮----
+tdNameA.textContent = declIndexName(original_decl);
+⋮----
+domSectValues.classList.remove("hidden");
+⋮----
+function renderNamespacePage(decl_index) {
+⋮----
+const members = namespaceMembers(decl_index, false).slice();
+const fields = declFields(decl_index).slice();
+⋮----
+function operatorCompare(a, b) {
+⋮----
+function updateCurNav(location_hash) {
+⋮----
+const query = location_hash.substring(1);
+const qpos = query.indexOf("?");
+⋮----
+nonSearchPart = query.substring(0, qpos);
+curNavSearch = decodeURIComponent(query.substring(qpos + 1));
+⋮----
+const source_mode = nonSearchPart.startsWith("src/");
+⋮----
+curNav.path = nonSearchPart.substring(4);
+⋮----
+curNav.decl = findDecl(nonSearchPart);
+⋮----
+function onHashChange(state) {
+history.replaceState({}, "");
+navigate(location.hash);
+if (state == null) window.scrollTo({top: 0});
+⋮----
+function onPopState(ev) {
+onHashChange(ev.state);
+⋮----
+function navigate(location_hash) {
+updateCurNav(location_hash);
+⋮----
+render();
+⋮----
+activateSelectedResult();
+⋮----
+function activateSelectedResult() {
+if (domSectSearchResults.classList.contains("hidden")) {
+⋮----
+location.href = aDom.getAttribute("href");
+⋮----
+domSearch.blur();
+⋮----
+function onSearchKeyDown(ev) {
+⋮----
+clearAsyncSearch();
+⋮----
+location.hash = computeSearchHash();
+⋮----
+ev.preventDefault();
+ev.stopPropagation();
+⋮----
+startSearch();
+⋮----
+moveSearchCursor(-1);
+⋮----
+moveSearchCursor(1);
+⋮----
+ev.stopPropagation(); // prevent keyboard shortcuts
+⋮----
+function onSearchChange(ev) {
+⋮----
+startAsyncSearch();
+⋮----
+function moveSearchCursor(dir) {
+⋮----
+renderSearchCursor();
+⋮----
+function onWindowKeyDown(ev) {
+⋮----
+if (!domHelpModal.classList.contains("hidden")) {
+⋮----
+domSearch.focus();
+domSearch.select();
+⋮----
+navigateToSource();
+⋮----
+showHelpModal();
+⋮----
+function showHelpModal() {
+domHelpModal.classList.remove("hidden");
+⋮----
+domHelpModal.focus();
+⋮----
+function navigateToSource() {
+⋮----
+function clearAsyncSearch() {
+⋮----
+clearTimeout(searchTimer);
+⋮----
+function startAsyncSearch() {
+⋮----
+searchTimer = setTimeout(startSearch, 10);
+⋮----
+function computeSearchHash() {
+// How location.hash works:
+// 1. http://example.com/     => ""
+// 2. http://example.com/#    => ""
+// 3. http://example.com/#foo => "#foo"
+// wat
+⋮----
+const oldHash = oldWatHash.startsWith("#") ? oldWatHash : "#" + oldWatHash;
+const parts = oldHash.split("?");
+⋮----
+function startSearch() {
+⋮----
+navigate(computeSearchHash());
+⋮----
+function renderSearch() {
+renderNav(curNav.decl);
+⋮----
+const ignoreCase = (curNavSearch.toLowerCase() === curNavSearch);
+const results = executeQuery(curNavSearch, ignoreCase);
+⋮----
+resizeDomList(domListSearchResults, results.length, '<li><a href="#"></a></li>');
+⋮----
+const full_name = fullyQualifiedName(match);
+⋮----
+aDom.setAttribute('href', navLinkFqn(full_name));
+⋮----
+domSectSearchResults.classList.remove("hidden");
+⋮----
+domSectSearchNoResults.classList.remove("hidden");
+⋮----
+function renderSearchCursor() {
+⋮----
+liDom.classList.add("selected");
+⋮----
+liDom.classList.remove("selected");
+⋮----
+function updateModuleList() {
+⋮----
+const name = unwrapString(wasm_exports.module_name(i));
+⋮----
+moduleList.push(name);
+⋮----
+function byDeclIndexName(a, b) {
+const a_name = declIndexName(a);
+const b_name = declIndexName(b);
+return operatorCompare(a_name, b_name);
+⋮----
+function byDeclIndexName2(a, b) {
+const a_name = declIndexName(a.original);
+const b_name = declIndexName(b.original);
+⋮----
+function decodeString(ptr, len) {
+⋮----
+return text_decoder.decode(new Uint8Array(wasm_exports.memory.buffer, ptr, len));
+⋮----
+function unwrapString(bigint) {
+const ptr = Number(bigint & 0xffffffffn);
+const len = Number(bigint >> 32n);
+return decodeString(ptr, len);
+⋮----
+function declTypeHtml(decl_index) {
+return unwrapString(wasm_exports.decl_type_html(decl_index));
+⋮----
+function declDocsHtmlShort(decl_index) {
+return unwrapString(wasm_exports.decl_docs_html(decl_index, true));
+⋮----
+function fullyQualifiedName(decl_index) {
+return unwrapString(wasm_exports.decl_fqn(decl_index));
+⋮----
+function declIndexName(decl_index) {
+return unwrapString(wasm_exports.decl_name(decl_index));
+⋮----
+function declSourceHtml(decl_index) {
+return unwrapString(wasm_exports.decl_source_html(decl_index));
+⋮----
+function declDoctestHtml(decl_index) {
+return unwrapString(wasm_exports.decl_doctest_html(decl_index));
+⋮----
+function fnProtoHtml(decl_index, linkify_fn_name) {
+return unwrapString(wasm_exports.decl_fn_proto_html(decl_index, linkify_fn_name));
+⋮----
+function setQueryString(s) {
+const jsArray = text_encoder.encode(s);
+⋮----
+const ptr = wasm_exports.query_begin(len);
+const wasmArray = new Uint8Array(wasm_exports.memory.buffer, ptr, len);
+wasmArray.set(jsArray);
+⋮----
+function executeQuery(query_string, ignore_case) {
+setQueryString(query_string);
+const ptr = wasm_exports.query_exec(ignore_case);
+const head = new Uint32Array(wasm_exports.memory.buffer, ptr, 1);
+⋮----
+return new Uint32Array(wasm_exports.memory.buffer, ptr + 4, len);
+⋮----
+function namespaceMembers(decl_index, include_private) {
+return unwrapSlice32(wasm_exports.namespace_members(decl_index, include_private));
+⋮----
+function declFields(decl_index) {
+return unwrapSlice32(wasm_exports.decl_fields(decl_index));
+⋮----
+function declParams(decl_index) {
+return unwrapSlice32(wasm_exports.decl_params(decl_index));
+⋮----
+function declErrorSet(decl_index) {
+return unwrapSlice64(wasm_exports.decl_error_set(decl_index));
+⋮----
+function errorSetNodeList(base_decl, err_set_node) {
+return unwrapSlice64(wasm_exports.error_set_node_list(base_decl, err_set_node));
+⋮----
+function unwrapSlice32(bigint) {
+⋮----
+return new Uint32Array(wasm_exports.memory.buffer, ptr, len);
+⋮----
+function unwrapSlice64(bigint) {
+⋮----
+return new BigUint64Array(wasm_exports.memory.buffer, ptr, len);
+⋮----
+function findDecl(fqn) {
+setInputString(fqn);
+const result = wasm_exports.find_decl();
+⋮----
+function findFileRoot(path) {
+setInputString(path);
+const result = wasm_exports.find_file_root();
+⋮----
+function declParent(decl_index) {
+const result = wasm_exports.decl_parent(decl_index);
+⋮----
+function fnErrorSet(decl_index) {
+const result = wasm_exports.fn_error_set(decl_index);
+⋮----
+function setInputString(s) {
+⋮----
+const ptr = wasm_exports.set_input_string(len);
+</file>
+
+<file path="src/components/ModuleNav.astro">
+---
+const { moduleName } = Astro.props;
+
+// Format the breadcrumb path
+const parts = moduleName.split('.');
+---
+
+<div id="sectNav">
+  <ul id="listNav">
+    <li><a href="/modules">Modules</a></li>
+    {parts.map((part: unknown, index: number) => {
+      const path = parts.slice(0, index + 1).join('.');
+      return (
+        <li>
+          <a 
+            href={`/modules/${path}`} 
+            class={index === parts.length - 1 ? 'active' : ''}
+          >
+            {part}
+          </a>
+        </li>
+      );
+    })}
+  </ul>
+</div>
+
+<style>
+  #listNav {
+    list-style-type: none;
+    margin: 0.5em 0 0 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #f1f1f1;
+  }
+  
+  #listNav li {
+    float: left;
+  }
+  
+  #listNav li a {
+    display: block;
+    color: #000;
+    text-align: center;
+    padding: .5em .8em;
+    text-decoration: none;
+  }
+  
+  #listNav li a:hover {
+    background-color: #555;
+    color: #fff;
+  }
+  
+  #listNav li a.active {
+    background-color: #FFBB4D;
+    color: #000;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    #listNav {
+      background-color: #333;
+    }
+    
+    #listNav li a {
+      color: #fff;
+    }
+    
+    #listNav li a.active {
+      background-color: #FFBB4D;
+      color: #000;
+    }
+  }
+</style>
+</file>
+
+<file path="src/content/config.ts">
+import { defineCollection, z } from 'astro:content';
+</file>
+
+<file path="src/lib/docParser.ts">
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+⋮----
+import { createReadStream } from 'fs';
+import { TextDecoder, TextEncoder } from 'util';
+⋮----
+// Constants from your original code
+⋮----
+// Paths relative to project
+⋮----
+// Global WebAssembly exports and utils
+⋮----
+// Initialize WebAssembly
+export async function initWasm()
+⋮----
+// Read the wasm file
+⋮----
+// Load sources.tar into memory
+⋮----
+// Compile and instantiate the wasm module
+⋮----
+// Load the tarball into wasm memory
+⋮----
+// Update module list
+⋮----
+// Helper functions
+function decodeString(ptr: number, len: number)
+⋮----
+export function unwrapString(bigint: bigint)
+⋮----
+function unwrapSlice32(bigint: bigint)
+⋮----
+function unwrapSlice64(bigint: bigint)
+⋮----
+function setInputString(s: string)
+⋮----
+function findDecl(fqn: string)
+⋮----
+function fullyQualifiedName(declIndex: number)
+⋮----
+function declIndexName(declIndex: number)
+⋮----
+function updateModuleList()
+⋮----
+// Public API functions
+export async function getAllModules()
+⋮----
+export async function getModuleData(moduleName: string)
+⋮----
+// Get module members
+⋮----
+// Process declarations
+⋮----
+// Get module documentation
+⋮----
+function processDeclarations(members: number[])
+⋮----
+// Process each member
+⋮----
+// Handle aliases by following them
+⋮----
+// Add declaration info
+⋮----
+export async function getDeclData(declIndex: number | string)
+⋮----
+// If string is passed, find the declaration
+⋮----
+// Base declaration data
+⋮----
+// Add category-specific data
+⋮----
+// Handle error set if present
+⋮----
+export async function getParamData(declIndex: number, paramIndex: number)
+⋮----
+export async function getFieldData(declIndex: number, fieldIndex: number)
+⋮----
+export async function getAllDeclarations()
+⋮----
+export async function executeSearch(query: string, ignoreCase: boolean = true)
+⋮----
+// Set the query string in WASM memory
+⋮----
+// Execute the search
+⋮----
+// Get the search results
+⋮----
+// Convert to declaration data
+⋮----
+export async function generateAllPages()
+</file>
+
+<file path="src/lib/sourceParser.ts">
+import fs from 'fs/promises';
+import path from 'path';
+import {extract} from 'tar';
+⋮----
+export async function extractTarball(tarballPath: string, outputDir: string)
+⋮----
+export async function getAllSourceFiles()
+⋮----
+// Extract source files from your tarball at build time
+// and return info about all the files
+return [/* array of file objects */];
+⋮----
+export async function getSourceContent(filePath: string)
+⋮----
+// Return the content of a specific source file
+</file>
+
+<file path="src/pages/modules/[module]/[...path].astro">
+---
+import Layout from '../../../layouts/Layout.astro';
+import { getAllModules, getModuleData, getDeclData } from '../../../lib/docParser';
+
+// This generates all declaration pages at build time
+export async function getStaticPaths() {
+  const modules = await getAllModules();
+  const paths = [];
+
+  for (const module of modules) {
+    const moduleData = await getModuleData(module.name);
+    
+    // Generate paths for all declarations in this module
+    for (const decl of moduleData.declarations) {
+      paths.push({
+        params: { 
+          module: module.name, 
+          path: decl.path 
+        },
+        props: { 
+          declData: await getDeclData(module.name, decl.path) 
+        }
+      });
+    }
+  }
+
+  return paths;
+}
+
+const { module, path } = Astro.params;
+const { declData } = Astro.props;
+console.log(`Rendering declaration page for ${module}.${path}`);
+console.log(declData);
+---
+
+<Layout title={`${declData.name} - Zig Documentation`}>
+  <main>
+    <!-- Render declaration documentation -->
+    <h1>{declData.name}</h1>
+    <div class="declaration-content">
+      {declData.docs && <div class="docs" set:html={declData.docs}></div>}
+      
+      {declData.sourceHtml && (
+        <div class="source-code">
+          <h2>Source Code</h2>
+          <pre><code set:html={declData.sourceHtml}></code></pre>
+        </div>
+      )}
+      
+     
+    </div>
+  </main>
+</Layout>
+</file>
+
+<file path="src/pages/modules/[module].astro">
+---
+import Layout from '../../layouts/Layout.astro';
+import { getAllModules, getFieldData, getModuleData } from '../../lib/docParser';
+import ModuleNav from '../../components/ModuleNav.astro';
+
+// Constants from docParser.ts
+const CAT_namespace = 0;
+const CAT_container = 1;
+const CAT_global_variable = 2;
+const CAT_function = 3;
+const CAT_primitive = 4;
+const CAT_error_set = 5;
+const CAT_global_const = 6;
+const CAT_alias = 7;
+const CAT_type = 8;
+const CAT_type_type = 9;
+const CAT_type_function = 10;
+
+// Generate all module pages at build time
+export async function getStaticPaths() {
+  const modules = await getAllModules();
+  
+  return Promise.all(modules.map(async module => {
+    const moduleData = await getModuleData(module.name);
+    return {
+      params: { module: module.name },
+      props: { moduleData }
+    };
+  }));
+}
+
+const { module } = Astro.params;
+const { moduleData } = Astro.props;
+
+// Process declarations into categories
+const typesList = [];
+const namespacesList = [];
+const errSetsList = [];
+const fnsList = [];
+const varsList = [];
+const valsList = [];
+
+moduleData.declarations.forEach(decl => {
+  switch (decl.category) {
+    case CAT_namespace:
+      namespacesList.push(decl);
+      break;
+    case CAT_container:
+    case CAT_type:
+    case CAT_type_type:
+    case CAT_type_function:
+      typesList.push(decl);
+      break;
+    case CAT_global_variable:
+      varsList.push(decl);
+      break;
+    case CAT_function:
+      fnsList.push(decl);
+      break;
+    case CAT_error_set:
+      errSetsList.push(decl);
+      break;
+    case CAT_global_const:
+    case CAT_primitive:
+      valsList.push(decl);
+      break;
+  }
+});
+
+// Sort lists by name
+const sortByName = (a, b) => a.name.localeCompare(b.name);
+typesList.sort(sortByName);
+namespacesList.sort(sortByName);
+errSetsList.sort(sortByName);
+fnsList.sort(sortByName);
+varsList.sort(sortByName);
+valsList.sort(sortByName);
+---
+
+<Layout title={`${module} - Zig Documentation`}>
+  <main>
+    <ModuleNav moduleName={module} />
+    
+    <h1 id="hdrName">
+      <span>module {module}</span>
+      <a href={`/src/${module}.zig`}>[src]</a>
+    </h1>
+    
+    <!-- Module documentation -->
+    {moduleData.docs && <div id="tldDocs" set:html={moduleData.docs} />}
+    
+    <!-- Types -->
+    {typesList.length > 0 && (
+      <div id="sectTypes">
+        <h2>Types</h2>
+        <ul id="listTypes" class="columns">
+          {typesList.map(type => (
+            <li>
+              <a href={`/${type.fqn}`}>{type.name}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    
+    <!-- Namespaces -->
+    {namespacesList.length > 0 && (
+      <div id="sectNamespaces">
+        <h2>Namespaces</h2>
+        <ul id="listNamespaces" class="columns">
+          {namespacesList.map(namespace => (
+            <li>
+              <a href={`/${namespace.fqn}`}>{namespace.name}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    
+    <!-- Error Sets -->
+    {errSetsList.length > 0 && (
+      <div id="sectErrSets">
+        <h2>Error Sets</h2>
+        <ul id="listErrSets" class="columns">
+          {errSetsList.map(errSet => (
+            <li>
+              <a href={`/${errSet.fqn}`}>{errSet.name}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    
+    <!-- Functions -->
+    {fnsList.length > 0 && (
+      <div id="sectFns">
+        <h2>Functions</h2>
+        <dl id="listFns">
+          {/* {fnsList.map(async (fn) => {
+            const fnData = await Astro.fetchContent(`/${fn.fqn}.astro`);
+            return (
+              <div>
+                <dt>
+                  <code set:html={fnData.protoHtml} />
+                </dt>
+                <dd set:html={fn.docsShort} />
+              </div>
+            );
+          })} */}
+        </dl>
+      </div>
+    )}
+    
+    <!-- Global Variables -->
+    {varsList.length > 0 && (
+      <div id="sectGlobalVars">
+        <h2>Global Variables</h2>
+        <table>
+          <tbody id="listGlobalVars">
+            {/* {varsList.map(async (variable) => {
+              const varData = await Astro.fetchContent(`/${variable.fqn}.astro`);
+              return (
+                <tr>
+                  <td><a href={`/${variable.fqn}`}>{variable.name}</a></td>
+                  <td set:html={varData.typeHtml} />
+                  <td set:html={variable.docsShort} />
+                </tr>
+              );
+            })} */}
+          </tbody>
+        </table>
+      </div>
+    )}
+    
+    <!-- Values -->
+    {valsList.length > 0 && (
+      <div id="sectValues">
+        <h2>Values</h2>
+        <table>
+          <tbody id="listValues">
+            {/* {valsList.map(async (value) => {
+              const valueData = await Astro.fetchContent(`/${value.fqn}.astro`);
+              return (
+                <tr>
+                  <td><a href={`/${value.fqn}`}>{value.name}</a></td>
+                  <td set:html={valueData.typeHtml} />
+                  <td set:html={value.docsShort} />
+                </tr>
+              );
+            })} */}
+          </tbody>
+        </table>
+      </div>
+    )}
+    
+    <!-- Fields -->
+    {moduleData.fields?.length > 0 && (
+      <div id="sectFields">
+        <h2>Fields</h2>
+        <div id="listFields">
+          {moduleData.fields.map(async (fieldIndex) => {
+            const field = await getFieldData(moduleData.rootDeclIndex, fieldIndex);
+            return <div set:html={field.html} />;
+          })}
+        </div>
+      </div>
+    )}
+  </main>
+</Layout>
+
+<style>
+  h1 {
+    border-bottom: 1px dashed;
+    margin: 0 0;
+    padding-bottom: 0.3em;
+  }
+  
+  h2 {
+    font-size: 1.3em;
+    margin: 0.5em 0;
+    padding: 0;
+    border-bottom: 1px solid;
+  }
+  
+  #hdrName a {
+    font-size: 0.7em;
+    padding-left: 1em;
+  }
+  
+  ul.columns {
+    column-width: 20em;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  ul.columns li {
+    padding: 0.2em 0;
+  }
+  
+  table {
+    width: 100%;
+    border-spacing: 0;
+    margin-bottom: 1em;
+  }
+  
+  td {
+    text-align: unset;
+    vertical-align: top;
+    margin: 0;
+    padding: 0.5em;
+    max-width: 20em;
+    text-overflow: ellipsis;
+    overflow-x: hidden;
+  }
+  
+  #listFns > div {
+    padding: 0.5em;
+    border: 1px solid #c0c0c0;
+    margin-top: 0.5em;
+  }
+  
+  #tldDocs {
+    margin: 1em 0;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    #listFns > div {
+      border-color: #373737;
+    }
+  }
+</style>
+</file>
+
+<file path="src/pages/src/[...path].astro">
+---
+import Layout from '../../layouts/Layout.astro';
+import { CAT_function, getAllDeclarations, getDeclData, unwrapString, wasmExports } from '../../lib/docParser';
+
+
+export async function getStaticPaths() {
+  const declarations = await getAllDeclarations();
+  
+  return declarations.map(decl => ({
+    params: { 
+      path: decl.fqn 
+    },
+    props: { 
+      declIndex: decl.index 
+    }
+  }));
+}
+
+const { declIndex } = Astro.props;
+const declData = await getDeclData(declIndex);
+---
+
+<Layout title={`${declData.name} - Zig Documentation`}>
+  <div id="sectNav">
+    <ul id="listNav">
+      <!-- Create navigation breadcrumbs -->
+    </ul>
+  </div>
+  
+  <h1 id="hdrName">
+    <span>{declData.categoryName} {declData.name}</span>
+    <a href={`/src/${declData.filePath}`}>[src]</a>
+  </h1>
+  
+  <!-- Render documentation based on category -->
+  {declData.docs && <div class="docs" set:html={declData.docs}></div>}
+  
+  {declData.category === CAT_function && (
+    <>
+      <div class="fn-proto">
+        <pre><code set:html={declData.protoHtml}></code></pre>
+      </div>
+      
+      {declData.params?.length > 0 && (
+        <div id="sectParams">
+          <h2>Parameters</h2>
+          <div id="listParams">
+            {declData.params.map((paramIndex) => (
+              <div set:html={unwrapString(wasmExports.decl_param_html(declIndex, paramIndex))}></div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {declData.doctestHtml && (
+        <div id="sectDocTests">
+          <h2>Example Usage</h2>
+          <pre><code set:html={declData.doctestHtml}></code></pre>
+        </div>
+      )}
+    </>
+  )}
+  
+  <!-- Add more conditional rendering based on category -->
+  
+  <div id="sectSource">
+    <h2>Source Code</h2>
+    <pre><code set:html={declData.sourceHtml}></code></pre>
+  </div>
+</Layout>
+</file>
+
+<file path="public/favicon.svg">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 128 128">
+    <path d="M50.4 78.5a75.1 75.1 0 0 0-28.5 6.9l24.2-65.7c.7-2 1.9-3.2 3.4-3.2h29c1.5 0 2.7 1.2 3.4 3.2l24.2 65.7s-11.6-7-28.5-7L67 45.5c-.4-1.7-1.6-2.8-2.9-2.8-1.3 0-2.5 1.1-2.9 2.7L50.4 78.5Zm-1.1 28.2Zm-4.2-20.2c-2 6.6-.6 15.8 4.2 20.2a17.5 17.5 0 0 1 .2-.7 5.5 5.5 0 0 1 5.7-4.5c2.8.1 4.3 1.5 4.7 4.7.2 1.1.2 2.3.2 3.5v.4c0 2.7.7 5.2 2.2 7.4a13 13 0 0 0 5.7 4.9v-.3l-.2-.3c-1.8-5.6-.5-9.5 4.4-12.8l1.5-1a73 73 0 0 0 3.2-2.2 16 16 0 0 0 6.8-11.4c.3-2 .1-4-.6-6l-.8.6-1.6 1a37 37 0 0 1-22.4 2.7c-5-.7-9.7-2-13.2-6.2Z" />
+    <style>
+        path { fill: #000; }
+        @media (prefers-color-scheme: dark) {
+            path { fill: #FFF; }
+        }
+    </style>
+</svg>
+</file>
+
+<file path="src/layouts/Layout.astro">
+---
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <nav>
+      <!-- Navigation similar to zig.org -->
+      <a class="logo" href="/">
+        <!-- SVG logo here -->
+      </a>
+      <div id="navWrap">
+        <input type="search" id="search" autocomplete="off" 
+               spellcheck="false" placeholder="Search documentation...">
+        <div id="sectNav"><ul id="listNav"></ul></div>
+      </div>
+    </nav>
+    <slot />
+    <script>
+      // Minimal client-side JS only for interactive features
+      // like search functionality
+    </script>
+  </body>
+</html>
+</file>
+
+<file path="src/pages/index.astro">
+---
+import Layout from "../layouts/Layout.astro";
+import { getAllModules } from "../lib/docParser";
+
+
+// Get all modules at build time
+const modules = await getAllModules();
+---
+
+<Layout title="Modules - Zig Documentation">
+  <main>
+    <h1>Zig Standard Library Modules</h1>
+    
+    <div class="modules-container">
+      <ul class="module-list">
+        {modules.map(module => (
+          <li>
+            <a href={`/modules/${module.name}`}>
+              <span class="module-name">{module.name}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  .modules-container {
+    margin: 2rem 0;
+  }
+  
+  .module-list {
+    list-style-type: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  
+  .module-list li {
+    background-color: #f5f5f5;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+  }
+  
+  .module-list li:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .module-list a {
+    display: block;
+    padding: 1rem;
+    color: #2A6286;
+    text-decoration: none;
+    font-family: "Source Code Pro", monospace;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .module-list li {
+      background-color: #222;
+    }
+    
+    .module-list li:hover {
+      background-color: #333;
+    }
+  }
+</style>
+</file>
+
+<file path=".gitignore">
+# build output
+dist/
+
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/
+assets
+</file>
+
+<file path="astro.config.mjs">
+// @ts-check
+⋮----
+// https://astro.build/config
+export default defineConfig({
+⋮----
+assetsInlineLimit: 0, // Ensure WebAssembly files aren't inlined
+⋮----
+exclude: ["fs", "path", "tar-stream"], // Node.js modules used at build time
+</file>
+
+<file path="package.json">
+{
+  "name": "zig-docs",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@types/tar-stream": "^3.1.3",
+    "astro": "^5.5.5",
+    "tar": "^7.4.3",
+    "tar-stream": "^3.1.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.13"
+  }
+}
+</file>
+
+<file path="README.md">
+# Astro Starter Kit: Basics
+
+```sh
+bun create astro@latest -- --template basics
+```
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/basics)
+[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/basics)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/basics/devcontainer.json)
+
+> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+
+![just-the-basics](https://github.com/withastro/astro/assets/2244813/a0a5533c-a856-4198-8470-2d67b1d7c554)
+
+## 🚀 Project Structure
+
+Inside of your Astro project, you'll see the following folders and files:
+
+```text
+/
+├── public/
+│   └── favicon.svg
+├── src/
+│   ├── layouts/
+│   │   └── Layout.astro
+│   └── pages/
+│       └── index.astro
+└── package.json
+```
+
+To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+
+## 🧞 Commands
+
+All commands are run from the root of the project, from a terminal:
+
+| Command                   | Action                                           |
+| :------------------------ | :----------------------------------------------- |
+| `bun install`             | Installs dependencies                            |
+| `bun dev`             | Starts local dev server at `localhost:4321`      |
+| `bun build`           | Build your production site to `./dist/`          |
+| `bun preview`         | Preview your build locally, before deploying     |
+| `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
+| `bun astro -- --help` | Get help using the Astro CLI                     |
+
+## 👀 Want to learn more?
+
+Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+</file>
+
+<file path="tsconfig.json">
+{
+  "extends": "astro/tsconfigs/strict",
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
+}
+</file>
+
+</files>

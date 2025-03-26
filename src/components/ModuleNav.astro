@@ -1,26 +1,28 @@
 ---
-const { moduleName } = Astro.props;
-
-// Format the breadcrumb path
-const parts = moduleName.split('.');
+const path = Astro.params.path;
+const module = Astro.params.module;
+const modulePath = `${module}/${path || ""}`;
+const parts = modulePath.split("/")?.filter(Boolean);
 ---
 
 <div id="sectNav">
   <ul id="listNav">
     <li><a href="/">Modules</a></li>
-    {parts.map((part: unknown, index: number) => {
-      const path = parts.slice(0, index + 1).join('.');
-      return (
-        <li>
-          <a 
-            href={`/modules/${path}`} 
-            class={index === parts.length - 1 ? 'active' : ''}
-          >
-            {part}
-          </a>
-        </li>
-      );
-    })}
+    {
+      parts.map((part: unknown, index: number) => {
+        const path = parts.slice(0, index + 1).join("/");
+        return (
+          <li>
+            <a
+              href={`/modules/${path}`}
+              class={index === parts.length - 1 ? "active" : ""}
+            >
+              {part}
+            </a>
+          </li>
+        );
+      })
+    }
   </ul>
 </div>
 
@@ -32,40 +34,40 @@ const parts = moduleName.split('.');
     overflow: hidden;
     background-color: #f1f1f1;
   }
-  
+
   #listNav li {
     float: left;
   }
-  
+
   #listNav li a {
     display: block;
     color: #000;
     text-align: center;
-    padding: .5em .8em;
+    padding: 0.5em 0.8em;
     text-decoration: none;
   }
-  
+
   #listNav li a:hover {
     background-color: #555;
     color: #fff;
   }
-  
+
   #listNav li a.active {
-    background-color: #FFBB4D;
+    background-color: #ffbb4d;
     color: #000;
   }
-  
+
   @media (prefers-color-scheme: dark) {
     #listNav {
       background-color: #333;
     }
-    
+
     #listNav li a {
       color: #fff;
     }
-    
+
     #listNav li a.active {
-      background-color: #FFBB4D;
+      background-color: #ffbb4d;
       color: #000;
     }
   }

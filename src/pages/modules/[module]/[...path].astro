@@ -1,47 +1,97 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
-import { getDeclData, getParamData, getFieldData, getErrorData, processDeclarations, CAT_namespace, CAT_container, CAT_global_variable, CAT_function, CAT_primitive, CAT_error_set, CAT_global_const, CAT_alias, CAT_type, CAT_type_type, CAT_type_function, getAllDeclarations } from '../../../lib/docParser';
+import ModuleNav from '../../../components/ModuleNav.astro';
+import { getDeclData, getParamData, getFieldData, getErrorData, processDeclarations, CAT_namespace, CAT_container, CAT_global_variable, CAT_function, CAT_primitive, CAT_error_set, CAT_global_const, CAT_alias, CAT_type, CAT_type_type, CAT_type_function, getAllModules, getModuleData, unwrapString, wasmExports } from '../../../lib/docParser';
 
 // This generates all declaration pages at build time
 export async function getStaticPaths() {
-  // Re-use getAllDeclarations - CAUTION: potentially very large/slow
-  // Consider generating paths only for top-level module members initially
-  // Or find a more efficient way via WASM if possible
   console.log("Generating static paths for all declarations...");
-  const declarations = await getAllDeclarations();
-  console.log(`Found ${declarations.length} declarations to generate paths for.`);
-
-  const paths = [];
-  for (const decl of declarations) {
-    // Skip if fqn is missing (shouldn't happen often)
-    if (!decl.fqn) {
-        console.warn(`Skipping declaration with missing FQN (Index: ${decl.originalIndex})`);
-        continue;
-    }
+  
+  // Get all modules first
+  const modules = await getAllModules();
+  console.log(`Found ${modules.length} modules to process.`);
+  
+  const paths: { params: { module: any; path: any; }; props: { declData: any; }; }[] = [];
+  const processedFqns = new Set(); // Track processed FQNs to avoid duplicates
+  
+  // New recursive function to process declarations and their nested members
+  async function processDeclarationRecursively(declFqn: string) {
+    // Skip if we've already processed this declaration
+    if (processedFqns.has(declFqn)) return;
+    processedFqns.add(declFqn);
+    
     try {
-        // Pre-fetch data for props. This ensures pages only build if data is valid.
-        // Note: This calls getDeclData for *every* declaration during build, which can be slow.
-        const declData = await getDeclData(decl.fqn); // Fetch by FQN
-        paths.push({
-            params: {
-                // Module part can be derived from fqn, e.g., 'std' from 'std.time.Instant'
-                // Or pass it down from getAllDeclarations if it includes module context
-                module: decl.fqn.split('.')[0], // Simplistic assumption
-                path: decl.fqn.substring(decl.fqn.indexOf('.') + 1) // Rest of the path
-            },
-            props: { declData }
-        });
+      // Get the declaration data
+      const declData = await getDeclData(declFqn);
+      
+      // Parse the FQN - skip the module part as it's in the [module] param
+      const fqnParts = declFqn.split('.');
+      
+      if (fqnParts.length < 2) return; // Skip if it's just a module name
+      
+      const moduleName = fqnParts[0];
+      const pathString = fqnParts.slice(1).join('/'); 
+      
+      paths.push({
+        params: {
+          module: moduleName,
+          path: pathString 
+        },
+        props: { declData }
+      });
+      
+      // Process nested members recursively
+      if (declData.members && declData.members.length > 0) {
+        const nestedDecls = processDeclarations(declData.members);
+        
+        // Process each nested declaration recursively
+        for (const nestedDecl of nestedDecls) {
+          await processDeclarationRecursively(nestedDecl.fqn);
+        }
+      }
+      
     } catch (error) {
-        console.error(`Error fetching data for declaration ${decl.fqn}:`, error);
-        // Skip generating page for this declaration if data fetch fails
+      console.error(`Error processing declaration ${declFqn}:`, error);
     }
   }
-  console.log(`Successfully prepared ${paths.length} paths.`);
+  
+  // Process each module
+  for (const module of modules) {
+    try {
+      const moduleData = await getModuleData(module.name);
+      
+      // Process all direct module declarations recursively
+      if (moduleData.declarations && moduleData.declarations.length > 0) {
+        for (const decl of moduleData.declarations) {
+          if (!decl.fqn) {
+            console.warn(`Skipping declaration with missing FQN (Index: ${decl.originalIndex})`);
+            continue;
+          }
+          
+          await processDeclarationRecursively(decl.fqn);
+        }
+      }
+    } catch (error) {
+      console.error(`Error processing module ${module.name}:`, error);
+    }
+  }
+  
+  console.log(`Successfully prepared ${paths.length} paths for declaration pages.`);
   return paths;
 }
 
-const { module, path: declPath } = Astro.params; // path is reserved, use declPath
-const { declData } = Astro.props; // Receive pre-fetched data
+// Fix path handling in the frontmatter section
+const { module, path: rawPath } = Astro.params; // path could be string or array
+
+// Convert path to array if it's a string, or use it directly if already an array
+const pathParts = typeof rawPath === 'string' ? rawPath.split('/') : (Array.isArray(rawPath) ? rawPath : [rawPath]);
+
+// Create a clean module name for breadcrumb navigation
+// If path is "time/Instant", moduleNameWithPath should be "std.time"
+const moduleNameWithPath = module + (pathParts.length > 1 ? 
+  '.' + pathParts.slice(0, -1).join('.') : '');
+
+const { declData } = Astro.props;
 
 // Fetch related data needed for rendering (params, fields, errors, nested members)
 let paramsHtml = [];
@@ -78,39 +128,37 @@ if (declData.members && declData.members.length > 0) {
 // Simple breadcrumb based on FQN - could be improved
 const fqnParts = declData.fqn.split('.');
 const breadcrumbs = fqnParts.map((part: any, index: number) => {
-    const currentPath = fqnParts.slice(0, index + 1).join('/');
+    const prefix = fqnParts.slice(0, index + 1);
+    let href;
+    
+    if (index === 0) {
+        // First part is module name
+        href = `/modules/${part}`;
+    } else {
+        // For nested parts, use the proper path format
+        href = `/modules/${prefix[0]}/${prefix.slice(1).join('/')}`;
+    }
+    
     return {
         name: part,
-        href: `/modules/${currentPath}`,
+        href: href,
         isCurrent: index === fqnParts.length - 1
     };
 });
-
 ---
 
 <Layout title={`${declData.name} (${declData.categoryName}) - Zig Documentation`}>
   <main>
-    <!-- Breadcrumb Navigation -->
-    <div id="sectNav">
-      <ul id="listNav">
-         <li><a href="/modules">Modules</a></li>
-         {breadcrumbs.map((crumb: { href: string | URL | null | undefined; isCurrent: any; name: unknown; }) => (
-           <li>
-             <a href={crumb.href} class:list={{ active: crumb.isCurrent }}>
-               {crumb.name}
-             </a>
-           </li>
-         ))}
-      </ul>
-    </div>
+    <!-- Use ModuleNav for breadcrumbs for consistency with module pages -->
+    <ModuleNav moduleName={moduleNameWithPath} />
 
     <!-- Declaration Header -->
     <h1 id="hdrName">
       <span>{declData.categoryName} {declData.name}</span>
       {/* Link to source using filePath from declData */}
-      <a href={`/src/${declData.filePath}#L1`} target="_blank" title="View source">[src]</a> {/* Add target blank for source */}
+      <a href={`/src/${declData.filePath}#L1`} target="_blank" title="View source">[src]</a>
     </h1>
-     {declData.isAlias && <p class="alias-note">Alias for <a href={`/modules/${module}/${declData.name}`}>{declData.targetFqn}</a></p>}
+    {declData.isAlias && <p class="alias-note">Alias for <a href={`/modules/${declData.targetFqn.replace(/\./g, '/')}`}>{declData.targetFqn}</a></p>}
 
 
     <!-- Full Documentation -->
@@ -142,9 +190,7 @@ const breadcrumbs = fqnParts.map((part: any, index: number) => {
         {errorsHtml.length > 0 && (
           <section id="sectFnErrors">
              <h2>Possible Errors</h2>
-             {/* Check if there's an 'anyerror' indication */}
-             {/* <div id="fnErrorsAnyError">...</div> */}
-             <div id="tableFnErrors"> {/* Using div instead of table for simplicity */}
+             <div id="tableFnErrors">
                  {errorsHtml.map((error) => (
                     <div class="error-entry" set:html={error.html}></div>
                  ))}
@@ -177,24 +223,27 @@ const breadcrumbs = fqnParts.map((part: any, index: number) => {
           </section>
         )}
 
-        {/* Render nested declarations if any */}
         {nestedDeclarations.length > 0 && (
            <section id="sectMembers">
               <h2>Members</h2>
-              {/* Basic list for now, could categorize like module page */}
               <ul class="nested-list columns">
-                 {nestedDeclarations.map(member => (
-                    <li>
-                       <a href={`/modules/${module}/${declData.name}/${member.name}`}>{member.name}</a>
-                       <span class="nested-category"> ({member.categoryName})</span> {/* Add helper for category name */}
-                    </li>
-                 ))}
+                 {nestedDeclarations.map(member => {
+                    // Create the proper URL for nested declarations
+                    const memberPath = `/modules/${member.fqn.replace(/\./g, '/')}`;
+                    return (
+                      <li>
+                         <a href={memberPath}>{member.name}</a>
+                         <span class="nested-category"> ({member.category !== undefined ? 
+                            unwrapString(wasmExports.decl_category_name(member.targetIndex)) : 
+                            'unknown'})</span>
+                      </li>
+                    );
+                 })}
               </ul>
            </section>
         )}
 
-         {/* Doc tests might apply to types too */}
-         {declData.doctestHtml && ! (declData.category === CAT_function || declData.category === CAT_type_function) && (
+         {declData.doctestHtml && !(declData.category === CAT_function || declData.category === CAT_type_function) && (
           <section id="sectDocTests">
             <h2>Example</h2>
             <div class="doctest">
@@ -225,7 +274,6 @@ const breadcrumbs = fqnParts.map((part: any, index: number) => {
         </section>
      )}
 
-
     <!-- Source Code Section (Always show if available) -->
     {declData.sourceHtml && (
       <section id="sectSource">
@@ -235,12 +283,11 @@ const breadcrumbs = fqnParts.map((part: any, index: number) => {
         </div>
       </section>
     )}
-
   </main>
 </Layout>
 
+<!-- Keep existing styles -->
 <style>
-  /* Re-use styles from [module].astro where applicable */
   h1 {
     border-bottom: 1px dashed;
     margin: 0 0 0.5em 0;

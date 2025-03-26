@@ -200,10 +200,8 @@ const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
           <ul id="listTypes" class="columns">
             {typesList.map((type) => (
               <li>
-                {/* Link using the original FQN (which could be an alias) */}
-                <a href={`/modules/${module}/${type.name}`}>{type.name}</a>
-                {/* Optionally show if it's an alias: */}
-                {/* {type.originalIndex !== type.targetIndex && <span class="alias-info"> (alias for {type.targetFqn})</span>} */}
+                {/* Update link to use proper path format */}
+                <a href={`/modules/${type.fqn.replace(/\./g, '/')}`}>{type.name}</a>
               </li>
             ))}
           </ul>
@@ -219,8 +217,7 @@ const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
           <ul id="listNamespaces" class="columns">
             {namespacesList.map((namespace) => (
               <li>
-                <a href={`/modules/${module}/${namespace.name}`}>{namespace.name}</a>
-                {/* {namespace.originalIndex !== namespace.targetIndex && <span class="alias-info"> (alias for {namespace.targetFqn})</span>} */}
+                <a href={`/modules/${namespace.fqn.replace(/\./g, '/')}`}>{namespace.name}</a>
               </li>
             ))}
           </ul>
@@ -236,8 +233,7 @@ const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
           <ul id="listErrSets" class="columns">
             {errSetsList.map((errSet) => (
               <li>
-                <a href={`/modules/${errSet.fqn}`}>{errSet.name}</a>
-                {/* {errSet.originalIndex !== errSet.targetIndex && <span class="alias-info"> (alias for {errSet.targetFqn})</span>} */}
+                <a href={`/modules/${errSet.fqn.replace(/\./g, '/')}`}>{errSet.name}</a>
               </li>
             ))}
           </ul>
@@ -255,7 +251,7 @@ const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
               <div class="decl-entry">
                 {/* fn.protoHtmlShort should contain linkified name from docParser */}
                 <dt>
-                  <a href={`/modules/${fn.fqn}`}>
+                  <a href={`/modules/${fn.fqn.replace(/\./g, '/')}`}>
                     <code>{fn.name}</code>
                   </a>
                   <code set:html={fn.protoHtmlShort?.replace(fn.name, "")} />
@@ -279,7 +275,7 @@ const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
               {varsList.map((variable) => (
                 <tr>
                   <td class="decl-name">
-                    <a href={`/modules/${module}/${variable.name}`}>
+                    <a href={variable.fqn ? `/modules/${variable.fqn.replace(/\./g, '/')}` : `#`}>
                       {variable.name}
                     </a>
                   </td>
@@ -306,7 +302,7 @@ const moduleSourcePath = module.replaceAll(".", "/") + ".zig";
               {valsList.map((value) => (
                 <tr>
                   <td class="decl-name">
-                    <a href={`/modules/${module}/${value.name}`}>
+                    <a href={`/modules/${value.fqn.replace(/\./g, '/')}`}>
                       {value.name}
                     </a>
                   </td>

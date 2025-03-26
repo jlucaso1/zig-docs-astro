@@ -22,4 +22,5 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
-assets
+assets/main.wasm
+assets/sources.tar

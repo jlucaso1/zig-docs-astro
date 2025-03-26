@@ -1,6 +1,3 @@
-Okay, here's a draft for the `README.md` file describing the project based on the code provided.
-
-```markdown
 # Zig Documentation Viewer (Astro + WASM)
 
 This project is a web-based documentation viewer for Zig libraries (likely intended for the Zig Standard Library), built using the [Astro](https://astro.build/) framework. It aims to provide an experience similar to the official Zig documentation site by parsing documentation comments and source code information directly from the library's source files.

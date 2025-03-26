@@ -17,6 +17,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WASM_PATH = path.resolve(__dirname, "../../assets/main.wasm");
 const SOURCES_PATH = path.resolve(__dirname, "../../assets/sources.tar");
 
+// URLs for downloading the assets
+const WASM_URL = "https://ziglang.org/documentation/master/std/main.wasm";
+const SOURCES_URL = "https://ziglang.org/documentation/master/std/sources.tar";
+
 // Global WebAssembly state (keep these here)
 let wasmInstance: WebAssembly.Instance;
 export let wasmExports: any; // Make exports accessible if needed elsewhere
@@ -26,9 +30,87 @@ let moduleList: { name: string; rootDeclIndex: number }[] = [];
 // Re-export constants for convenience if pages import directly from docParser
 export * from "./constants";
 
+/**
+ * Downloads and caches WASM assets if they don't exist.
+ * This ensures that the required files are present before initializing WASM.
+ */
+async function downloadWasmAssets(): Promise<void> {
+  console.log("Checking for WASM assets...");
+  
+  // Ensure the assets directory exists
+  const assetsDir = path.dirname(WASM_PATH);
+  try {
+    await fs.access(assetsDir);
+  } catch (error) {
+    console.log("Creating assets directory...");
+    await fs.mkdir(assetsDir, { recursive: true });
+  }
+  
+  // Check and download main.wasm if needed
+  let wasmExists = false;
+  try {
+    await fs.access(WASM_PATH);
+    wasmExists = true;
+    console.log("main.wasm found in assets folder.");
+  } catch (error) {
+    console.log("main.wasm not found. Downloading from ziglang.org...");
+  }
+
+  // Check and download sources.tar if needed
+  let sourcesExists = false;
+  try {
+    await fs.access(SOURCES_PATH);
+    sourcesExists = true;
+    console.log("sources.tar found in assets folder.");
+  } catch (error) {
+    console.log("sources.tar not found. Downloading from ziglang.org...");
+  }
+
+  // Download files if they don't exist
+  const downloads: Promise<void>[] = [];
+  
+  if (!wasmExists) {
+    downloads.push(
+      fetch(WASM_URL)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to fetch main.wasm: ${response.status} ${response.statusText}`);
+          }
+          return response.arrayBuffer();
+        })
+        .then(buffer => fs.writeFile(WASM_PATH, Buffer.from(buffer)))
+        .then(() => console.log("main.wasm downloaded and saved successfully."))
+    );
+  }
+
+  if (!sourcesExists) {
+    downloads.push(
+      fetch(SOURCES_URL)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to fetch sources.tar: ${response.status} ${response.statusText}`);
+          }
+          return response.arrayBuffer();
+        })
+        .then(buffer => fs.writeFile(SOURCES_PATH, Buffer.from(buffer)))
+        .then(() => console.log("sources.tar downloaded and saved successfully."))
+    );
+  }
+
+  if (downloads.length > 0) {
+    await Promise.all(downloads);
+    console.log("All required assets are now available.");
+  } else {
+    console.log("All required assets already exist.");
+  }
+}
+
 // --- WASM Initialization ---
 export async function initWasm() {
   if (wasmInstance) return; // Already initialized
+
+  // Download and cache required assets if they don't exist
+  await downloadWasmAssets();
 
   // Define __dirname for ES modules - Correct calculation relative to this file
   const __filename = fileURLToPath(import.meta.url);

@@ -13,6 +13,7 @@ import {
   wasmExports,
 } from "../../../lib/docParser"; // Keep wasmExports/unwrapString if needed directly
 import { unwrapString } from "../../../lib/wasmUtils";
+import Link from "../../../components/Link.astro";
 
 // ... (getStaticPaths remains largely the same, but use getDeclPath for consistency if needed)
 export async function getStaticPaths() {
@@ -183,12 +184,12 @@ const aliasLink = getDeclPath(declData.targetFqn);
     <h1 id="hdrName">
       <span>{declData.categoryName} {declData.name}</span>
       {/* Link to source using filePath */}
-      <a href={sourceLink} target="_blank" title="View source">[src]</a>
+      <Link href={sourceLink} target="_blank" title="View source">[src]</Link>
     </h1>
     {
       declData.isAlias && (
         <p class="alias-note">
-          Alias for <a href={aliasLink}>{declData.targetFqn}</a>
+          Alias for <Link href={aliasLink}>{declData.targetFqn}</Link>
         </p>
       )
     }
@@ -289,7 +290,7 @@ const aliasLink = getDeclPath(declData.targetFqn);
                       : "unknown";
                   return (
                     <li>
-                      <a href={memberPath}>{member.name}</a>
+                      <Link href={memberPath}>{member.name}</Link>
                       <span class="nested-category"> ({categoryName})</span>
                     </li>
                   );

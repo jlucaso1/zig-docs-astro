@@ -6,7 +6,7 @@ interface Props {
 const { title } = Astro.props;
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -16,15 +16,8 @@ const { title } = Astro.props;
   </head>
   <body>
     <nav>
-      <!-- Navigation similar to zig.org -->
-      <a class="logo" href="/">
-        <!-- SVG logo here -->
-      </a>
+      <slot />
+      <script></script>
     </nav>
-    <slot />
-    <script>
-      // Minimal client-side JS only for interactive features
-      // like search functionality
-    </script>
   </body>
 </html>

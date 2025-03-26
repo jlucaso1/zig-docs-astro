@@ -1,4 +1,6 @@
 ---
+import Link from './Link.astro';
+
 // Expect a prop like "std" or "std.time.Instant"
 interface Props {
   currentPath: string;
@@ -7,12 +9,12 @@ interface Props {
 const { currentPath } = Astro.props;
 
 // Split the path into parts for breadcrumbs
-const parts = currentPath?.split('.') || [];
+const parts = currentPath?.split(".") || [];
 
 // Generate breadcrumb items
 const breadcrumbs = parts.map((part, index) => {
-  const fqn = parts.slice(0, index + 1).join('.');
-  const path = fqn.replace(/\./g, '/'); // Convert FQN to URL path segment
+  const fqn = parts.slice(0, index + 1).join(".");
+  const path = fqn.replace(/\./g, "/"); // Convert FQN to URL path segment
   return {
     name: part,
     href: `/modules/${path}`,
@@ -23,14 +25,16 @@ const breadcrumbs = parts.map((part, index) => {
 
 <div id="sectNav">
   <ul id="listNav">
-    <li><a href="/">Modules</a></li>
-    {breadcrumbs.map(crumb => (
-      <li>
-        <a href={crumb.href} class:list={[crumb.isCurrent && "active"]}>
-          {crumb.name}
-        </a>
-      </li>
-    ))}
+    <li><Link href="/">Modules</Link></li>
+    {
+      breadcrumbs.map((crumb) => (
+        <li>
+          <Link href={crumb.href} class:list={[crumb.isCurrent && "active"]}>
+            {crumb.name}
+          </Lin>
+        </li>
+      ))
+    }
   </ul>
 </div>
 
@@ -48,15 +52,14 @@ const breadcrumbs = parts.map((part, index) => {
   #listNav li {
     float: left;
   }
-   /* Add separators using ::before on list items except the first two */
-   #listNav li:not(:first-child):not(:nth-child(2))::before {
-      content: '/';
-      padding: 0 0.4em; /* Adjust spacing */
-      color: #888;
-      display: inline-block; /* Needed for padding */
-      vertical-align: middle; /* Align with text */
-   }
-
+  /* Add separators using ::before on list items except the first two */
+  #listNav li:not(:first-child):not(:nth-child(2))::before {
+    content: "/";
+    padding: 0 0.4em; /* Adjust spacing */
+    color: #888;
+    display: inline-block; /* Needed for padding */
+    vertical-align: middle; /* Align with text */
+  }
 
   #listNav li a {
     display: inline-block; /* Change from block to allow separator */
@@ -76,23 +79,23 @@ const breadcrumbs = parts.map((part, index) => {
     background-color: #ffbb4d;
     color: #000;
     font-weight: bold;
-     border-radius: 2px;
+    border-radius: 2px;
   }
 
   @media (prefers-color-scheme: dark) {
     #listNav {
       background-color: #333;
     }
-     #listNav li:not(:first-child):not(:nth-child(2))::before {
-         color: #777;
-     }
+    #listNav li:not(:first-child):not(:nth-child(2))::before {
+      color: #777;
+    }
 
     #listNav li a {
       color: #fff;
     }
-     #listNav li a:hover {
-       background-color: #444;
-     }
+    #listNav li a:hover {
+      background-color: #444;
+    }
 
     #listNav li a.active {
       background-color: #ffbb4d;

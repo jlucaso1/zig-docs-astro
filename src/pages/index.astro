@@ -1,4 +1,5 @@
 ---
+import Link from "../components/Link.astro";
 import Layout from "../layouts/Layout.astro";
 import { getAllModules } from "../lib/docParser";
 import { getDeclPath } from "../lib/pathUtils"; // Import path util
@@ -18,10 +19,10 @@ modules.sort((a, b) => a.name.localeCompare(b.name));
         {modules.map(module => (
           <li>
             {/* Use path util for link generation */}
-            <a href={getDeclPath(module.name)}>
+            <Link href={getDeclPath(module.name)}>
               <span class="module-name">{module.name}</span>
-            </a>
-          </li>
+            </Link>
+          </Lin>
         ))}
       </ul>
     </div>

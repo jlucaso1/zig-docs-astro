@@ -6,6 +6,7 @@ import * as DeclCategories from "../../lib/constants";
 import { getDeclPath, getModuleSourcePath } from "../../lib/pathUtils";
 // Import main data functions from docParser
 import { getFieldData } from "../../lib/docParser";
+import Link from "../../components/Link.astro";
 
 
 // Generate all module pages at build time
@@ -129,7 +130,7 @@ const moduleSourceLink = getModuleSourcePath(module);
     <h1 id="hdrName">
       <span>module {module}</span>
       {/* Link to the source file of the module */}
-      <a href={moduleSourceLink} target="_blank" title="View source">[src]</a>
+      <Link href={moduleSourceLink} target="_blank" title="View source">[src]</Link>
     </h1>
 
     <!-- Module documentation -->
@@ -143,7 +144,7 @@ const moduleSourceLink = getModuleSourcePath(module);
           {typesList.map((type) => (
             <li>
               {/* Use path util for link */}
-              <a href={getDeclPath(type.fqn)}>{type.name}</a>
+              <Link href={getDeclPath(type.fqn)}>{type.name}</Link>
               {/* Optionally show alias info if needed */}
               {/* {type.originalIndex !== type.targetIndex && <span class="alias-info"> (alias for {type.targetFqn})</span>} */}
             </li>
@@ -159,7 +160,7 @@ const moduleSourceLink = getModuleSourcePath(module);
         <ul id="listNamespaces" class="columns">
           {namespacesList.map((namespace) => (
             <li>
-              <a href={getDeclPath(namespace.fqn)}>{namespace.name}</a>
+              <Link href={getDeclPath(namespace.fqn)}>{namespace.name}</Link>
             </li>
           ))}
         </ul>
@@ -173,7 +174,7 @@ const moduleSourceLink = getModuleSourcePath(module);
         <ul id="listErrSets" class="columns">
           {errSetsList.map((errSet) => (
             <li>
-              <a href={getDeclPath(errSet.fqn)}>{errSet.name}</a>
+              <Link href={getDeclPath(errSet.fqn)}>{errSet.name}</Link>
             </li>
           ))}
         </ul>
@@ -188,9 +189,9 @@ const moduleSourceLink = getModuleSourcePath(module);
           {fnsList.map((fn) => (
             <div class="decl-entry">
               <dt>
-                <a href={getDeclPath(fn.fqn)}>
+                <Link href={getDeclPath(fn.fqn)}>
                   <code>{fn.name}</code>
-                </a>
+                </Link>
                 {/* Display rest of short proto if available */}
                 {fn.protoHtmlShort && <code set:html={fn.protoHtmlShort.replace(fn.name, '')} />}
               </dt>
@@ -211,7 +212,7 @@ const moduleSourceLink = getModuleSourcePath(module);
             {varsList.map((variable) => (
               <tr>
                 <td class="decl-name">
-                  <a href={getDeclPath(variable.fqn)}>{variable.name}</a>
+                  <Link href={getDeclPath(variable.fqn)}>{variable.name}</Link>
                 </td>
                 {/* Use type HTML */}
                 <td class="decl-type">
@@ -239,7 +240,7 @@ const moduleSourceLink = getModuleSourcePath(module);
                   {value.category === DeclCategories.CAT_primitive ? (
                      <span>{value.name}</span>
                   ) : (
-                     <a href={getDeclPath(value.fqn)}>{value.name}</a>
+                     <Link href={getDeclPath(value.fqn)}>{value.name}</Link>
                   )}
                 </td>
                 <td class="decl-type">

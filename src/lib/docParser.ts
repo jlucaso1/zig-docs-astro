@@ -286,7 +286,7 @@ export async function getModuleData(moduleName: string) {
   return {
     name: moduleName,
     rootDeclIndex: rootDeclIndex,
-    docs: docsHtml,
+    docs: parseHTMLToCode(docsHtml),
     declarations: declarations,
     fields: Array.from(fieldIndices),
   };
@@ -404,7 +404,7 @@ export async function getDeclData(identifier: number | string) {
     category: category, // Category of the resolved declaration
     categoryName: unwrapString(wasmExports.decl_category_name(targetIndex)),
     filePath: unwrapString(wasmExports.decl_file_path(targetIndex)),
-    docs: unwrapString(wasmExports.decl_docs_html(targetIndex, false)), // false = Full docs
+    docs: parseHTMLToCode(unwrapString(wasmExports.decl_docs_html(targetIndex, false))), // false = Full docs
     sourceHtml: parseHTMLToCode(
       unwrapString(wasmExports.decl_source_html(targetIndex))
     ),
@@ -513,7 +513,7 @@ export async function getFieldData(
 ): Promise<{ html: string }> {
   await initWasm();
   // TODO: Add validation: check if declIndex is actually a container/type?
-  const html = unwrapString(wasmExports.decl_field_html(declIndex, fieldIndex));
+  const html = parseHTMLToCode(unwrapString(wasmExports.decl_field_html(declIndex, fieldIndex)));
   return { html };
 }
 

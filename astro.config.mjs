@@ -3,7 +3,7 @@ import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
-  output: 'static',
+  output: "static",
   base: process.env.BASE_URL,
   site: process.env.SITE,
   vite: {
@@ -11,7 +11,7 @@ export default defineConfig({
       assetsInlineLimit: 0, // Ensure WebAssembly files aren't inlined
     },
     optimizeDeps: {
-      exclude: ["fs", "path"], // Node.js modules used at build time
+      exclude: ["fs", "path", "cheerio"], // Node.js modules used at build time
     },
   },
 });

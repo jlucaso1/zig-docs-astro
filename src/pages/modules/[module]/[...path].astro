@@ -117,11 +117,9 @@ const aliasLink = getDeclPath(declData.targetFqn);
             <section id="sectFnProto">
               <h2>Prototype</h2>
               <div class="fn-proto">
-                <pre>
-                  <code>
-                    <Fragment set:html={declData.protoHtml} />
-                  </code>
-                </pre>
+                <code>
+                  <Fragment set:html={declData.protoHtml} />
+                </code>
               </div>
             </section>
           )}
@@ -129,9 +127,9 @@ const aliasLink = getDeclPath(declData.targetFqn);
           {paramsHtml.length > 0 && (
             <section id="sectParams">
               <h2>Parameters</h2>
-              <div id="listParams">
+              <div id="listParams" class="fn-proto">
                 {paramsHtml.map((param) => (
-                  <div class="param-entry" set:html={param.html} />
+                  <code set:html={param.html} />
                 ))}
               </div>
             </section>
@@ -152,11 +150,9 @@ const aliasLink = getDeclPath(declData.targetFqn);
             <section id="sectDocTests">
               <h2>Example</h2>
               <div class="doctest">
-                <pre>
-                  <code>
-                    <Fragment set:html={declData.doctestHtml} />
-                  </code>
-                </pre>
+                <code>
+                  <Fragment set:html={declData.doctestHtml} />
+                </code>
               </div>
             </section>
           )}
@@ -215,11 +211,9 @@ const aliasLink = getDeclPath(declData.targetFqn);
               <section id="sectDocTests">
                 <h2>Example</h2>
                 <div class="doctest">
-                  <pre>
-                    <code>
-                      <Fragment set:html={declData.doctestHtml} />
-                    </code>
-                  </pre>
+                  <code>
+                    <Fragment set:html={declData.doctestHtml} />
+                  </code>
                 </div>
               </section>
             )}
@@ -425,13 +419,19 @@ const aliasLink = getDeclPath(declData.targetFqn);
   }
 </style>
 
-<script type="module" is:inline>
-  import { codeToHtml } from 'https://esm.sh/shiki@3.0.0'
+<script>
+  import { codeToHtml } from "shiki";
 
-  const sourceCode = document.getElementById('sourceCode')
-  const sourceCodeOriginal = sourceCode.innerHTML
-  sourceCode.innerHTML = await codeToHtml(sourceCodeOriginal, {
-    lang: 'zig',
-    theme: 'dracula'
-  })
+  const codesElements = document.getElementsByTagName("code");
+
+  await Promise.all(
+    Array.from(codesElements).map(async (codeElement) => {
+      const codeOriginal = codeElement.innerHTML;
+      codeElement.innerHTML = await codeToHtml(codeOriginal, {
+        lang: "zig",
+        theme: "dracula",
+      });
+    })
+  );
 </script>
+

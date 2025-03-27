@@ -333,7 +333,7 @@ export async function processDeclarations(memberIndices: number[]) {
     const protoHtmlShort =
       category === DeclCategories.CAT_function ||
       category === DeclCategories.CAT_type_function
-        ? unwrapString(wasmExports.decl_fn_proto_html(targetIndex, true)) // true = short proto
+        ? parseHTMLToCode(unwrapString(wasmExports.decl_fn_proto_html(targetIndex, true))) // true = short proto
         : null;
 
     declarations.push({
@@ -418,15 +418,15 @@ export async function getDeclData(identifier: number | string) {
   switch (category) {
     case DeclCategories.CAT_function:
     case DeclCategories.CAT_type_function:
-      data.protoHtml = unwrapString(
+      data.protoHtml = parseHTMLToCode(unwrapString(
         wasmExports.decl_fn_proto_html(targetIndex, false) // false = Full prototype
-      );
+      ));
       data.params = Array.from(
         unwrapSlice32(wasmExports.decl_params(targetIndex))
       );
-      data.doctestHtml = unwrapString(
+      data.doctestHtml = parseHTMLToCode(unwrapString(
         wasmExports.decl_doctest_html(targetIndex)
-      );
+      ));
       const errorSetNode = wasmExports.fn_error_set(targetIndex);
       if (errorSetNode !== 0n) {
         // Assuming 0n indicates no error set
@@ -503,7 +503,7 @@ export async function getParamData(
 ): Promise<{ html: string }> {
   await initWasm();
   // TODO: Add validation: check if declIndex is actually a function/type_function?
-  const html = unwrapString(wasmExports.decl_param_html(declIndex, paramIndex));
+  const html = parseHTMLToCode(unwrapString(wasmExports.decl_param_html(declIndex, paramIndex)));
   return { html };
 }
 

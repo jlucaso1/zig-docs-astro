@@ -475,17 +475,14 @@ const moduleSourceLink = getModuleSourcePath(module);
 </style>
 
 <script>
-  import { codeToHtml } from "shiki";
+  import { codeToHtml } from "../../lib/codeToHtml";
 
   const codesElements = document.getElementsByTagName("code");
 
   await Promise.all(
     Array.from(codesElements).map(async (codeElement) => {
       const codeOriginal = codeElement.innerHTML;
-      codeElement.innerHTML = await codeToHtml(codeOriginal, {
-        lang: "zig",
-        theme: "dracula",
-      });
+      codeElement.innerHTML = await codeToHtml(codeOriginal);
     })
   );
 </script>

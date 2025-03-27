@@ -159,7 +159,7 @@ export async function generateDeclarationPaths(forceRegenerate = false) {
         declData.members.length > 0
       ) {
         // processDeclarations returns basic info including fqn
-        const nestedDecls = processDeclarationsInternal(declData.members);
+        const nestedDecls = await processDeclarationsInternal(declData.members);
         await Promise.all(
           nestedDecls.map((nestedDecl) =>
             processDeclarationRecursively(nestedDecl.fqn)

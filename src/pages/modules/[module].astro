@@ -56,7 +56,6 @@ const errSetsList: any[] = [];
 const fnsList: any[] = [];
 const varsList: any[] = []; // Includes global vars and consts
 const valsList: any[] = []; // Includes primitives
-
 // Use constants from the imported module
 moduleData.declarations.forEach((decl: { category: any; fqn: any; }) => {
   switch (decl.category) {

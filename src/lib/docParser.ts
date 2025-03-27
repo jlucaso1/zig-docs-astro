@@ -10,6 +10,7 @@ import {
   setInputString,
 } from "./wasmUtils";
 import * as DeclCategories from "./constants"; // Import all constants
+import * as cheerio from 'cheerio';
 
 // Paths relative to project
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -36,7 +37,7 @@ export * from "./constants";
  */
 async function downloadWasmAssets(): Promise<void> {
   console.log("Checking for WASM assets...");
-  
+
   // Ensure the assets directory exists
   const assetsDir = path.dirname(WASM_PATH);
   try {
@@ -45,7 +46,7 @@ async function downloadWasmAssets(): Promise<void> {
     console.log("Creating assets directory...");
     await fs.mkdir(assetsDir, { recursive: true });
   }
-  
+
   // Check and download main.wasm if needed
   let wasmExists = false;
   try {
@@ -68,17 +69,19 @@ async function downloadWasmAssets(): Promise<void> {
 
   // Download files if they don't exist
   const downloads: Promise<void>[] = [];
-  
+
   if (!wasmExists) {
     downloads.push(
       fetch(WASM_URL)
-        .then(response => {
+        .then((response) => {
           if (!response.ok) {
-            throw new Error(`Failed to fetch main.wasm: ${response.status} ${response.statusText}`);
+            throw new Error(
+              `Failed to fetch main.wasm: ${response.status} ${response.statusText}`
+            );
           }
           return response.arrayBuffer();
         })
-        .then(buffer => fs.writeFile(WASM_PATH, Buffer.from(buffer)))
+        .then((buffer) => fs.writeFile(WASM_PATH, Buffer.from(buffer)))
         .then(() => console.log("main.wasm downloaded and saved successfully."))
     );
   }
@@ -86,14 +89,18 @@ async function downloadWasmAssets(): Promise<void> {
   if (!sourcesExists) {
     downloads.push(
       fetch(SOURCES_URL)
-        .then(response => {
+        .then((response) => {
           if (!response.ok) {
-            throw new Error(`Failed to fetch sources.tar: ${response.status} ${response.statusText}`);
+            throw new Error(
+              `Failed to fetch sources.tar: ${response.status} ${response.statusText}`
+            );
           }
           return response.arrayBuffer();
         })
-        .then(buffer => fs.writeFile(SOURCES_PATH, Buffer.from(buffer)))
-        .then(() => console.log("sources.tar downloaded and saved successfully."))
+        .then((buffer) => fs.writeFile(SOURCES_PATH, Buffer.from(buffer)))
+        .then(() =>
+          console.log("sources.tar downloaded and saved successfully.")
+        )
     );
   }
 
@@ -268,7 +275,7 @@ export async function getModuleData(moduleName: string) {
     wasmExports.namespace_members(rootDeclIndex, false) // false = exclude private members
   );
 
-  const declarations = processDeclarations(Array.from(memberIndices));
+  const declarations = await processDeclarations(Array.from(memberIndices));
 
   const docsHtml = unwrapString(
     wasmExports.decl_docs_html(rootDeclIndex, false) // false = full docs
@@ -286,8 +293,11 @@ export async function getModuleData(moduleName: string) {
 }
 
 // Helper to process a list of declaration indices into structured data
-export function processDeclarations(memberIndices: number[]) {
-  if (!wasmExports) throw new Error("WASM not initialized");
+export async function processDeclarations(memberIndices: number[]) {
+  if (!wasmExports) {
+    console.warn("WASM not initialized. Cannot process declarations.");
+    await initWasm();
+  };
 
   const declarations = [];
   for (let memberIndex of memberIndices) {
@@ -395,8 +405,12 @@ export async function getDeclData(identifier: number | string) {
     categoryName: unwrapString(wasmExports.decl_category_name(targetIndex)),
     filePath: unwrapString(wasmExports.decl_file_path(targetIndex)),
     docs: unwrapString(wasmExports.decl_docs_html(targetIndex, false)), // false = Full docs
-    sourceHtml: unwrapString(wasmExports.decl_source_html(targetIndex)),
-    typeHtml: unwrapString(wasmExports.decl_type_html(targetIndex)), // Type for vars, fields etc.
+    sourceHtml: parseHTMLToCode(
+      unwrapString(wasmExports.decl_source_html(targetIndex))
+    ),
+    typeHtml: parseHTMLToCode(
+      unwrapString(wasmExports.decl_type_html(targetIndex))
+    ), // Type for vars, fields etc.
     isAlias: isAlias, // Was the original identifier an alias?
   };
 
@@ -515,4 +529,9 @@ export async function getErrorData(
   }
   const html = unwrapString(wasmExports.error_html(baseDeclIndex, errorNode));
   return { html };
+}
+
+function parseHTMLToCode(html: string): string {
+  const $ = cheerio.load(html);
+  return $("body").text();
 }

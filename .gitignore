@@ -24,3 +24,6 @@ pnpm-debug.log*
 .idea/
 assets/main.wasm
 assets/sources.tar
+assets/declaration-paths-cache.json
+# cache directory
+.cache/

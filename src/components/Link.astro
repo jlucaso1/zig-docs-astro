@@ -13,7 +13,12 @@ function isAbsoluteUrl(url: string) {
 
 // Process the href
 let processedHref = href;
-if (href && typeof href === "string" && !isAbsoluteUrl(href)) {
+if (
+  import.meta.env.BASE_URL !== "/" &&
+  href &&
+  typeof href === "string" &&
+  !isAbsoluteUrl(href)
+) {
   // Get base URL from environment
   const base = import.meta.env.BASE_URL || "";
 

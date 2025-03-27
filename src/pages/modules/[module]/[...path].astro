@@ -14,115 +14,22 @@ import {
 } from "../../../lib/docParser"; // Keep wasmExports/unwrapString if needed directly
 import { unwrapString } from "../../../lib/wasmUtils";
 import Link from "../../../components/Link.astro";
+import { generateDeclarationPaths } from "../../../lib/pathGenerator";
+// Import the new path generator function
 
-// ... (getStaticPaths remains largely the same, but use getDeclPath for consistency if needed)
+// Use the cached path generator instead of the heavy inline logic
 export async function getStaticPaths() {
-  console.log("Generating static paths for all declarations...");
-  // Ensure WASM is initialized if not already done globally or by Astro integration
-  // await initWasm(); // Might not be needed if Astro handles top-level await in docParser correctly
+  // pass true to force regeneration if needed (e.g. when source files change)
+  const forceRegenerate = false; // Set to true when needed or via env variable
+  return await generateDeclarationPaths(forceRegenerate);
+}
 
-  const {
-    getAllModules,
-    getModuleData,
-    getDeclData: getDeclDataInternal,
-    processDeclarations: processDeclarationsInternal,
-  } = await import("../../../lib/docParser"); // Dynamic import if top-level await issues
-
-  const modules = await getAllModules();
-  console.log(`Found ${modules.length} modules to process.`);
-
-  const paths: {
-    params: { module: string; path: string | undefined };
-    props: { declData: any };
-  }[] = [];
-  const processedFqns = new Set<string>(); // Track processed FQNs
-
-  async function processDeclarationRecursively(declFqn: string) {
-    if (processedFqns.has(declFqn)) return;
-    processedFqns.add(declFqn);
-
-    try {
-      const declData = await getDeclDataInternal(declFqn);
-      const fqnParts = declFqn.split(".");
-      if (fqnParts.length < 2) return; // Skip module roots
-
-      const moduleName = fqnParts[0];
-      // path can be undefined if it's a direct child of the module
-      const pathString =
-        fqnParts.length > 1 ? fqnParts.slice(1).join("/") : undefined;
-
-      paths.push({
-        params: {
-          module: moduleName,
-          path: pathString,
-        },
-        props: { declData },
-      });
-
-      // Process nested members recursively if it's a container/namespace
-      if (
-        (declData.category === DeclCategories.CAT_container ||
-          declData.category === DeclCategories.CAT_namespace ||
-          declData.category === DeclCategories.CAT_type) && // Include CAT_type if they can have members
-        declData.members &&
-        declData.members.length > 0
-      ) {
-        // processDeclarations returns basic info including fqn
-        const nestedDecls = processDeclarationsInternal(declData.members);
-        await Promise.all(
-          nestedDecls.map((nestedDecl) =>
-            processDeclarationRecursively(nestedDecl.fqn)
-          )
-        );
-      }
-    } catch (error) {
-      console.error(
-        `Error processing declaration ${declFqn} in getStaticPaths:`,
-        error
-      );
-    }
-  }
-
-  await Promise.all(
-    modules.map(async (module) => {
-      try {
-        const moduleData = await getModuleData(module.name);
-        if (moduleData.declarations && moduleData.declarations.length > 0) {
-          // Filter out declarations without FQN before mapping
-          const validDeclarations = moduleData.declarations.filter((decl) => {
-            if (!decl.fqn) {
-              console.warn(
-                `Skipping declaration with missing FQN in module ${module.name} (Index: ${decl.originalIndex})`
-              );
-              return false;
-            }
-            return true;
-          });
-          await Promise.all(
-            validDeclarations.map((decl) =>
-              processDeclarationRecursively(decl.fqn)
-            )
-          );
-        }
-      } catch (error) {
-        console.error(
-          `Error processing module ${module.name} in getStaticPaths:`,
-          error
-        );
-      }
-    })
-  );
-
-  console.log(
-    `Successfully prepared ${paths.length} paths for declaration pages.`
-  );
-  return paths;
+interface Props {
+  declData: any;
 }
 
 // --- Frontmatter ---
-const { module, path } = Astro.params; // path is slugified, potentially undefined
 const { declData } = Astro.props; // Received from getStaticPaths
-
 // Fetch related data (params, fields, errors) using helper functions
 let paramsHtml = [];
 if (declData.params?.length > 0) {
@@ -162,7 +69,7 @@ if (
   declData.members?.length > 0
 ) {
   // Re-use processDeclarations helper from docParser
-  nestedDeclarations = processDeclarations(declData.members);
+  nestedDeclarations = await processDeclarations(declData.members);
   // Sort members alphabetically by name
   nestedDeclarations.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -355,11 +262,9 @@ const aliasLink = getDeclPath(declData.targetFqn);
         <section id="sectSource">
           <h2>Source</h2>
           <div class="source-code">
-            <pre>
-              <code>
-                <Fragment set:html={declData.sourceHtml} />
-              </code>
-            </pre>
+            <code id="sourceCode">
+              <Fragment set:html={declData.sourceHtml} />
+            </code>
           </div>
         </section>
       )
@@ -519,3 +424,14 @@ const aliasLink = getDeclPath(declData.targetFqn);
     /* Dark mode for breadcrumbs handled by ModuleNav component style */
   }
 </style>
+
+<script type="module" is:inline>
+  import { codeToHtml } from 'https://esm.sh/shiki@3.0.0'
+
+  const sourceCode = document.getElementById('sourceCode')
+  const sourceCodeOriginal = sourceCode.innerHTML
+  sourceCode.innerHTML = await codeToHtml(sourceCodeOriginal, {
+    lang: 'zig',
+    theme: 'dracula'
+  })
+</script>

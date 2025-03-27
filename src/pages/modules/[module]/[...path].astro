@@ -88,15 +88,15 @@ const aliasLink = getDeclPath(declData.targetFqn);
     <ModuleNav currentPath={declData.fqn} />
 
     <!-- Declaration Header -->
-    <h1 id="hdrName">
-      <span>{declData.categoryName} {declData.name}</span>
+    <h1 id="hdrName" class="m-0 mb-2 pb-1 text-2xl font-normal border-0 border-b border-dashed">
+      <span class="font-mono">{declData.categoryName} {declData.name}</span>
       {/* Link to source using filePath */}
-      <Link href={sourceLink} target="_blank" title="View source">[src]</Link>
+      <Link href={sourceLink} target="_blank" title="View source" class="pl-4 text-sm font-sans font-normal no-underline text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">[src]</Link>
     </h1>
     {
       declData.isAlias && (
-        <p class="alias-note">
-          Alias for <Link href={aliasLink}>{declData.targetFqn}</Link>
+        <p class="italic text-gray-600 dark:text-gray-400 -mt-2 mb-4 text-sm">
+          Alias for <Link href={aliasLink} class="text-gray-700 dark:text-gray-300">{declData.targetFqn}</Link>
         </p>
       )
     }
@@ -104,7 +104,7 @@ const aliasLink = getDeclPath(declData.targetFqn);
     <!-- Full Documentation -->
     {
       declData.docs && (
-        <div id="tldDocs" class="docs" set:html={declData.docs} />
+        <div id="tldDocs" class="docs my-4 leading-relaxed" set:html={declData.docs} />
       )
     }
 
@@ -114,10 +114,10 @@ const aliasLink = getDeclPath(declData.targetFqn);
         declData.category === DeclCategories.CAT_type_function) && (
         <>
           {declData.protoHtml && (
-            <section id="sectFnProto">
-              <h2>Prototype</h2>
-              <div class="fn-proto">
-                <code>
+            <section id="sectFnProto" class="mb-6">
+              <h2 class="text-xl mt-6 mb-2 pb-1 border-0 border-b border-solid font-normal">Prototype</h2>
+              <div class="fn-proto bg-gray-800 border border-gray-700 p-2 px-4 overflow-x-auto mt-2">
+                <code class="font-mono text-sm">
                   <Fragment set:html={declData.protoHtml} />
                 </code>
               </div>
@@ -125,32 +125,32 @@ const aliasLink = getDeclPath(declData.targetFqn);
           )}
 
           {paramsHtml.length > 0 && (
-            <section id="sectParams">
-              <h2>Parameters</h2>
-              <div id="listParams" class="fn-proto">
+            <section id="sectParams" class="mb-6">
+              <h2 class="text-xl mt-6 mb-2 pb-1 border-0 border-b border-solid font-normal">Parameters</h2>
+              <div id="listParams" class="fn-proto bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 px-4 overflow-x-auto mt-2">
                 {paramsHtml.map((param) => (
-                  <code set:html={param.html} />
+                  <code class="font-mono text-sm" set:html={param.html} />
                 ))}
               </div>
             </section>
           )}
 
           {errorsHtml.length > 0 && (
-            <section id="sectFnErrors">
-              <h2>Possible Errors</h2>
-              <div id="tableFnErrors">
+            <section id="sectFnErrors" class="mb-6">
+              <h2 class="text-xl mt-6 mb-2 pb-1 border-0 border-b border-solid font-normal">Possible Errors</h2>
+              <div id="tableFnErrors" class="mt-2">
                 {errorsHtml.map((error) => (
-                  <div class="error-entry" set:html={error.html} />
+                  <div class="error-entry py-3 px-2 border-0 border-b border-gray-200 dark:border-gray-800 leading-relaxed last:border-b-0" set:html={error.html} />
                 ))}
               </div>
             </section>
           )}
 
           {declData.doctestHtml && (
-            <section id="sectDocTests">
-              <h2>Example</h2>
-              <div class="doctest">
-                <code>
+            <section id="sectDocTests" class="mb-6">
+              <h2 class="text-xl mt-6 mb-2 pb-1 border-0 border-b border-solid font-normal">Example</h2>
+              <div class="doctest bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 px-4 overflow-x-auto mt-2">
+                <code class="font-mono text-sm">
                   <Fragment set:html={declData.doctestHtml} />
                 </code>
               </div>
@@ -167,20 +167,20 @@ const aliasLink = getDeclPath(declData.targetFqn);
         declData.category === DeclCategories.CAT_namespace) && (
         <>
           {fieldsHtml.length > 0 && (
-            <section id="sectFields">
-              <h2>Fields</h2>
-              <div id="listFields">
+            <section id="sectFields" class="mb-6">
+              <h2 class="text-xl mt-6 mb-2 pb-1 border-0 border-b border-solid font-normal">Fields</h2>
+              <div id="listFields" class="mt-2">
                 {fieldsHtml.map((field) => (
-                  <div class="field-entry" set:html={field.html} />
+                  <div class="field-entry py-3 px-2 border-0 border-b border-gray-200 dark:border-gray-800 leading-relaxed last:border-b-0" set:html={field.html} />
                 ))}
               </div>
             </section>
           )}
 
           {nestedDeclarations.length > 0 && (
-            <section id="sectMembers">
-              <h2>Members</h2>
-              <ul class="nested-list columns">
+            <section id="sectMembers" class="mb-6">
+              <h2 class="text-xl mt-6 mb-2 pb-1 border-0 border-b border-solid font-normal">Members</h2>
+              <ul class="nested-list columns-[20em] list-none m-0 p-0">
                 {nestedDeclarations.map((member) => {
                   // Create the proper URL for nested declarations using path util
                   const memberPath = getDeclPath(member.fqn);
@@ -192,9 +192,9 @@ const aliasLink = getDeclPath(declData.targetFqn);
                         )
                       : "unknown";
                   return (
-                    <li>
-                      <Link href={memberPath}>{member.name}</Link>
-                      <span class="nested-category"> ({categoryName})</span>
+                    <li class="py-0.5 break-words">
+                      <Link href={memberPath} class="font-mono">{member.name}</Link>
+                      <span class="text-sm text-gray-500 dark:text-gray-400 ml-2"> ({categoryName})</span>
                     </li>
                   );
                 })}
@@ -208,10 +208,10 @@ const aliasLink = getDeclPath(declData.targetFqn);
               declData.category === DeclCategories.CAT_function ||
               declData.category === DeclCategories.CAT_type_function
             ) && (
-              <section id="sectDocTests">
-                <h2>Example</h2>
-                <div class="doctest">
-                  <code>
+              <section id="sectDocTests" class="mb-6">
+                <h2 class="text-xl mt-6 mb-2 pb-1 border-0 border-b border-solid font-normal">Example</h2>
+                <div class="doctest bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 px-4 overflow-x-auto mt-2">
+                  <code class="font-mono text-sm">
                     <Fragment set:html={declData.doctestHtml} />
                   </code>
                 </div>
@@ -225,11 +225,11 @@ const aliasLink = getDeclPath(declData.targetFqn);
     {
       declData.category === DeclCategories.CAT_error_set &&
         errorsHtml.length > 0 && (
-          <section id="sectErrSetErrors">
-            <h2>Errors</h2>
-            <div id="listErrSetErrors">
+          <section id="sectErrSetErrors" class="mb-6">
+            <h2 class="text-xl mt-6 mb-2 pb-1 border-0 border-b border-solid font-normal">Errors</h2>
+            <div id="listErrSetErrors" class="mt-2">
               {errorsHtml.map((error) => (
-                <div class="error-entry" set:html={error.html} />
+                <div class="error-entry py-3 px-2 border-0 border-b border-gray-200 dark:border-gray-800 leading-relaxed last:border-b-0" set:html={error.html} />
               ))}
             </div>
           </section>
@@ -241,8 +241,8 @@ const aliasLink = getDeclPath(declData.targetFqn);
       (declData.category === DeclCategories.CAT_global_variable ||
         declData.category === DeclCategories.CAT_global_const) &&
         declData.typeHtml && (
-          <section id="sectVarType">
-            <h2>Type</h2>
+          <section id="sectVarType" class="mb-6">
+            <h2 class="text-xl mt-6 mb-2 pb-1 border-0 border-b border-solid font-normal">Type</h2>
             <p>
               <Fragment set:html={declData.typeHtml} />
             </p>
@@ -253,10 +253,10 @@ const aliasLink = getDeclPath(declData.targetFqn);
     <!-- Source Code Section (Always show if available) -->
     {
       !import.meta.env.HIDE_SOURCES && declData.sourceHtml && (
-        <section id="sectSource">
-          <h2>Source</h2>
-          <div class="source-code">
-            <code id="sourceCode">
+        <section id="sectSource" class="mb-6">
+          <h2 class="text-xl mt-6 mb-2 pb-1 border-0 border-b border-solid font-normal">Source</h2>
+          <div class="source-code bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 px-4 overflow-x-auto mt-2">
+            <code id="sourceCode" class="font-mono text-sm">
               <Fragment set:html={declData.sourceHtml} />
             </code>
           </div>
@@ -265,159 +265,6 @@ const aliasLink = getDeclPath(declData.targetFqn);
     }
   </main>
 </Layout>
-
-<!-- Styles remain the same -->
-<style>
-  /* ... existing styles ... */
-  h1 {
-    border-bottom: 1px dashed;
-    margin: 0 0 0.5em 0;
-    padding-bottom: 0.3em;
-    font-size: 1.8em;
-    font-weight: normal;
-  }
-  h1 span {
-    font-family: "Source Code Pro", monospace;
-  }
-  h1 a {
-    font-size: 0.7em;
-    padding-left: 1em;
-    font-family: sans-serif;
-    font-weight: normal;
-    text-decoration: none;
-    color: #888;
-  }
-  h1 a:hover {
-    color: #000;
-  }
-
-  .alias-note {
-    font-style: italic;
-    color: #666;
-    margin: -0.5em 0 1em 0;
-    font-size: 0.9em;
-  }
-  .alias-note a {
-    color: #444;
-  }
-
-  h2 {
-    font-size: 1.4em;
-    margin: 1.5em 0 0.5em 0;
-    padding: 0 0 0.2em 0;
-    border-bottom: 1px solid;
-    font-weight: normal;
-  }
-
-  section {
-    margin-bottom: 1.5em;
-  }
-
-  #tldDocs {
-    margin: 1em 0 2em 0;
-    line-height: 1.6;
-  }
-  .docs p {
-    margin: 0.5em 0;
-  } /* Basic paragraph spacing */
-
-  /* Function Proto / Source Code */
-  .fn-proto,
-  .doctest,
-  .source-code {
-    background-color: #f8f8f8;
-    border: 1px solid #e8e8e8;
-    padding: 0.5em 1em;
-    overflow-x: auto;
-    margin-top: 0.5em;
-  }
-  pre {
-    margin: 0;
-  }
-  code {
-    font-family: "Source Code Pro", monospace;
-    font-size: 0.95em;
-  }
-
-  /* Params, Fields, Errors */
-  #listParams > .param-entry,
-  #listFields > .field-entry,
-  #tableFnErrors > .error-entry, /* Style individual errors */
-  #listErrSetErrors > .error-entry {
-    border-bottom: 1px solid #eee;
-    padding: 0.8em 0.5em;
-    line-height: 1.5;
-  }
-  #listParams > .param-entry:last-child,
-  #listFields > .field-entry:last-child,
-  #tableFnErrors > .error-entry:last-child,
-  #listErrSetErrors > .error-entry:last-child {
-    border-bottom: none;
-  }
-  /* Assuming HTML from WASM contains structure like name, type, docs */
-  /* Add more specific styles based on the actual HTML generated */
-
-  /* Nested Members List */
-  ul.nested-list {
-    column-width: 20em;
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-  }
-  ul.nested-list li {
-    padding: 0.1em 0;
-    overflow-wrap: break-word;
-  }
-  ul.nested-list a {
-    font-family: "Source Code Pro", monospace;
-  }
-  .nested-category {
-    font-size: 0.85em;
-    color: #777;
-    margin-left: 0.5em;
-  }
-
-  /* Breadcrumbs are now handled by ModuleNav component style */
-
-  /* Dark mode */
-  @media (prefers-color-scheme: dark) {
-    h1 {
-      border-bottom-color: #555;
-    }
-    h1 a {
-      color: #aaa;
-    }
-    h1 a:hover {
-      color: #fff;
-    }
-    .alias-note {
-      color: #aaa;
-    }
-    .alias-note a {
-      color: #ccc;
-    }
-    h2 {
-      border-bottom-color: #666;
-    }
-    .fn-proto,
-    .doctest,
-    .source-code {
-      background-color: #2c2c2c;
-      border-color: #444;
-    } /* Darker background */
-    #listParams > .param-entry,
-    #listFields > .field-entry,
-    #tableFnErrors > .error-entry,
-    #listErrSetErrors > .error-entry {
-      border-bottom-color: #333;
-    }
-    .nested-category {
-      color: #aaa;
-    }
-
-    /* Dark mode for breadcrumbs handled by ModuleNav component style */
-  }
-</style>
 
 <script>
   import { codeToHtml } from "../../../lib/codeToHtml";

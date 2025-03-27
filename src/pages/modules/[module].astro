@@ -1,10 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import ModuleNav from "../../components/ModuleNav.astro";
-// Import specific constants and path utils
 import * as DeclCategories from "../../lib/constants";
 import { getDeclPath, getModuleSourcePath } from "../../lib/pathUtils";
-// Import main data functions from docParser
 import { getFieldData } from "../../lib/docParser";
 import Link from "../../components/Link.astro";
 
@@ -131,36 +129,32 @@ const moduleSourceLink = getModuleSourcePath(module);
 
 <Layout title={`${module} - Zig Documentation`}>
   <main>
-    {/* Pass the module name as the current path */}
     <ModuleNav currentPath={module} />
 
-    <h1 id="hdrName">
-      <span>module {module}</span>
-      {/* Link to the source file of the module */}
-      <Link href={moduleSourceLink} target="_blank" title="View source"
-        >[src]</Link
-      >
+    <h1 id="hdrName" class="text-2xl font-normal pb-3 mb-2 border-0 border-dashed border-b">
+      <span class="font-mono">{module}</span>
+      <!-- <Link 
+        href={moduleSourceLink} 
+        target="_blank" 
+        title="View source" 
+        class="text-sm pl-4 font-sans font-normal text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white no-underline"
+      >[src]</Link> -->
     </h1>
 
-    <!-- Module documentation -->
     {
       moduleData.docs && (
-        <div id="tldDocs" class="docs" set:html={moduleData.docs} />
+        <div id="tldDocs" class="my-4 mb-8 leading-relaxed docs" set:html={moduleData.docs} />
       )
     }
 
-    <!-- Types (Structs, Enums, Unions, Type Functions) -->
     {
       typesList.length > 0 && (
-        <section id="sectTypes">
-          <h2>Types</h2>
-          <ul id="listTypes" class="columns">
+        <section id="sectTypes" class="mb-6">
+          <h2 class="text-xl font-normal my-6 pb-1 border-0 border-b border-solid">Types</h2>
+          <ul id="listTypes" class="columns-[20em] list-none m-0 p-0">
             {typesList.map((type) => (
-              <li>
-                {/* Use path util for link */}
-                <Link href={getDeclPath(type.fqn)}>{type.name}</Link>
-                {/* Optionally show alias info if needed */}
-                {/* {type.originalIndex !== type.targetIndex && <span class="alias-info"> (alias for {type.targetFqn})</span>} */}
+              <li class="py-0.5 break-words">
+                <Link href={getDeclPath(type.fqn)} class="font-mono">{type.name}</Link>
               </li>
             ))}
           </ul>
@@ -168,15 +162,14 @@ const moduleSourceLink = getModuleSourcePath(module);
       )
     }
 
-    <!-- Namespaces -->
     {
       namespacesList.length > 0 && (
-        <section id="sectNamespaces">
-          <h2>Namespaces</h2>
-          <ul id="listNamespaces" class="columns">
+        <section id="sectNamespaces" class="mb-6">
+          <h2 class="text-xl font-normal my-6 pb-1 border-0 border-b border-solid">Namespaces</h2>
+          <ul id="listNamespaces" class="columns-[20em] list-none m-0 p-0">
             {namespacesList.map((namespace) => (
-              <li>
-                <Link href={getDeclPath(namespace.fqn)}>{namespace.name}</Link>
+              <li class="py-0.5 break-words">
+                <Link href={getDeclPath(namespace.fqn)} class="font-mono">{namespace.name}</Link>
               </li>
             ))}
           </ul>
@@ -184,15 +177,14 @@ const moduleSourceLink = getModuleSourcePath(module);
       )
     }
 
-    <!-- Error Sets -->
     {
       errSetsList.length > 0 && (
-        <section id="sectErrSets">
-          <h2>Error Sets</h2>
-          <ul id="listErrSets" class="columns">
+        <section id="sectErrSets" class="mb-6">
+          <h2 class="text-xl font-normal my-6 pb-1 border-0 border-b border-solid">Error Sets</h2>
+          <ul id="listErrSets" class="columns-[20em] list-none m-0 p-0">
             {errSetsList.map((errSet) => (
-              <li>
-                <Link href={getDeclPath(errSet.fqn)}>{errSet.name}</Link>
+              <li class="py-0.5 break-words">
+                <Link href={getDeclPath(errSet.fqn)} class="font-mono">{errSet.name}</Link>
               </li>
             ))}
           </ul>
@@ -200,24 +192,22 @@ const moduleSourceLink = getModuleSourcePath(module);
       )
     }
 
-    <!-- Functions -->
     {
       fnsList.length > 0 && (
-        <section id="sectFns">
-          <h2>Functions</h2>
+        <section id="sectFns" class="mb-6">
+          <h2 class="text-xl font-normal my-6 pb-1 border-0 border-b border-solid">Functions</h2>
           <dl id="listFns">
             {fnsList.map((fn) => (
-              <div class="decl-entry">
-                <dt style={{ display: "flex", columnGap: "0.5em" }}>
+              <div class="p-2 mt-2 bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">
+                <dt class="flex gap-2 font-mono text-base mb-1">
                   {fn.protoHtmlShort && (
                     <Link href={getDeclPath(fn.fqn)}>
-                      <code>{fn.protoHtmlShort.replace(fn.name, "")}</code>
+                      <code class="text-sm">{fn.protoHtmlShort.replace(fn.name, "")}</code>
                     </Link>
                   )}
                 </dt>
-                {/* Use short docs */}
                 {fn.docsShort && (
-                  <dd class="docs-short" set:html={fn.docsShort} />
+                  <dd class="ml-4 text-sm text-gray-600 dark:text-gray-300" set:html={fn.docsShort} />
                 )}
               </div>
             ))}
@@ -226,26 +216,19 @@ const moduleSourceLink = getModuleSourcePath(module);
       )
     }
 
-    <!-- Global Variables & Constants -->
     {
       varsList.length > 0 && (
-        <section id="sectGlobalVars">
-          <h2>Global Variables & Constants</h2>
-          <table>
+        <section id="sectGlobalVars" class="mb-6">
+          <h2 class="text-xl font-normal my-6 pb-1 border-0 border-b border-solid">Global Variables & Constants</h2>
+          <table class="w-full border-collapse mb-4 table-fixed">
             <tbody id="listGlobalVars">
               {varsList.map((variable) => (
                 <tr>
-                  <td class="decl-name">
+                  <td class="text-left align-top p-2 border-b border-gray-200 dark:border-gray-700 break-words w-1/4 font-mono">
                     <Link href={getDeclPath(variable.fqn)}>
                       {variable.name}
                     </Link>
                   </td>
-                  {/* Use type HTML */}
-                  {/* <td class="decl-type">
-                    {variable.typeHtml && <div set:html={variable.typeHtml} />}
-                  </td> */}
-                  {/* Use short docs */}
-                  {/* <td class="docs-short" set:html={variable.docsShort} /> */}
                 </tr>
               ))}
             </tbody>
@@ -254,27 +237,25 @@ const moduleSourceLink = getModuleSourcePath(module);
       )
     }
 
-    <!-- Values (Primitives, etc.) -->
     {
       valsList.length > 0 && (
-        <section id="sectValues">
-          <h2>Values</h2>
-          <table>
+        <section id="sectValues" class="mb-6">
+          <h2 class="text-xl font-normal my-6 pb-1 border-0 border-b border-solid">Values</h2>
+          <table class="w-full border-collapse mb-4 table-fixed">
             <tbody id="listValues">
               {valsList.map((value) => (
                 <tr>
-                  <td class="decl-name">
-                    {/* Primitives might not have unique pages, link carefully */}
+                  <td class="text-left align-top p-2 border-0 border-b border-gray-200 dark:border-gray-700 break-words w-1/4 font-mono">
                     {value.category === DeclCategories.CAT_primitive ? (
                       <span>{value.name}</span>
                     ) : (
                       <Link href={getDeclPath(value.fqn)}>{value.name}</Link>
                     )}
                   </td>
-                  <td class="decl-type">
+                  <td class="text-left align-top p-2 border-b border-gray-200 dark:border-gray-700 break-words w-3/10">
                     {value.typeHtml && <div set:html={value.typeHtml} />}
                   </td>
-                  <td class="docs-short" set:html={value.docsShort} />
+                  <td class="text-left align-top p-2 border-0 border-b border-gray-200 dark:border-gray-700 break-words w-9/20 text-sm text-gray-600 dark:text-gray-300" set:html={value.docsShort} />
                 </tr>
               ))}
             </tbody>
@@ -283,14 +264,13 @@ const moduleSourceLink = getModuleSourcePath(module);
       )
     }
 
-    <!-- Fields (If the module file itself acts as a container) -->
     {
       moduleFieldsHtml.length > 0 && (
-        <section id="sectFields">
-          <h2>Fields</h2>
+        <section id="sectFields" class="mb-6">
+          <h2 class="text-xl font-normal my-6 pb-1 border-0 border-b border-solid">Fields</h2>
           <div id="listFields">
             {moduleFieldsHtml.map((field) => (
-              <div class="field-entry" set:html={field.html} />
+              <div class="border-b border-0 border-gray-200 dark:border-gray-700 py-2 last:border-b-0 field-entry" set:html={field.html} />
             ))}
           </div>
         </section>
@@ -298,181 +278,6 @@ const moduleSourceLink = getModuleSourcePath(module);
     }
   </main>
 </Layout>
-
-<!-- Styles remain the same -->
-<style>
-  /* ... existing styles ... */
-  h1 {
-    border-bottom: 1px dashed;
-    margin: 0 0 0.5em 0;
-    padding-bottom: 0.3em;
-    font-size: 1.8em; /* Slightly larger */
-    font-weight: normal;
-  }
-
-  h2 {
-    font-size: 1.4em;
-    margin: 1.5em 0 0.5em 0;
-    padding: 0 0 0.2em 0;
-    border-bottom: 1px solid;
-    font-weight: normal;
-  }
-
-  section {
-    margin-bottom: 1.5em;
-  }
-
-  #hdrName span {
-    font-family: "Source Code Pro", monospace;
-  }
-
-  #hdrName a {
-    font-size: 0.7em;
-    padding-left: 1em;
-    font-family: sans-serif;
-    font-weight: normal;
-    text-decoration: none;
-    color: #888;
-  }
-  #hdrName a:hover {
-    color: #000;
-  }
-
-  ul.columns {
-    column-width: 20em;
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  ul.columns li {
-    padding: 0.1em 0; /* Tighter spacing */
-    overflow-wrap: break-word; /* Prevent long names overflowing */
-  }
-  ul.columns a {
-    font-family: "Source Code Pro", monospace;
-  }
-
-  table {
-    width: 100%;
-    border-spacing: 0;
-    margin-bottom: 1em;
-    table-layout: fixed; /* Prevent wide columns pushing others */
-  }
-
-  td {
-    text-align: left;
-    vertical-align: top;
-    margin: 0;
-    padding: 0.5em;
-    border-bottom: 1px solid #eee; /* subtle row separator */
-    overflow-wrap: break-word;
-  }
-  td.decl-name {
-    width: 25%;
-    font-family: "Source Code Pro", monospace;
-  }
-  td.decl-type {
-    width: 30%;
-  }
-  td.docs-short {
-    width: 45%;
-    color: #555;
-    font-size: 0.9em;
-  }
-  td.docs-short p {
-    /* Assuming docs might have <p> tags */
-    margin: 0;
-  }
-  td code {
-    font-size: 0.95em;
-  } /* Ensure code tags in table are consistent */
-
-  dl#listFns > div.decl-entry {
-    padding: 0.5em;
-    border: 1px solid #e0e0e0;
-    margin-top: 0.5em;
-    background-color: #fdfdfd;
-    border-radius: 3px; /* Slight rounding */
-  }
-  dl#listFns dt {
-    font-family: "Source Code Pro", monospace;
-    font-size: 1.05em;
-    margin-bottom: 0.3em;
-  }
-  /* Separate link for name from rest of proto */
-  dl#listFns dt a code {
-    font-weight: bold;
-  }
-  dl#listFns dt code {
-    font-size: 0.95em;
-  } /* Consistent code size */
-  dl#listFns dd.docs-short {
-    margin-left: 1em;
-    font-size: 0.9em;
-    color: #555;
-  }
-  dl#listFns dd.docs-short p {
-    margin: 0;
-  }
-
-  #tldDocs {
-    margin: 1em 0 2em 0; /* More space around module docs */
-    line-height: 1.6;
-  }
-  #tldDocs p {
-    margin: 0.5em 0;
-  }
-
-  #listFields > .field-entry {
-    /* Style fields if needed, assuming getFieldData returns appropriate HTML */
-    border-bottom: 1px solid #eee;
-    padding: 0.5em 0;
-  }
-  #listFields > .field-entry:last-child {
-    border-bottom: none;
-  }
-
-  .alias-info {
-    /* Style for optional alias info */
-    font-size: 0.8em;
-    color: #777;
-    margin-left: 0.5em;
-  }
-
-  /* Dark mode adjustments */
-  @media (prefers-color-scheme: dark) {
-    h1 {
-      border-bottom-color: #555;
-    }
-    h2 {
-      border-bottom-color: #666;
-    }
-    #hdrName a {
-      color: #aaa;
-    }
-    #hdrName a:hover {
-      color: #fff;
-    }
-    td {
-      border-bottom-color: #333;
-    }
-    td.docs-short,
-    dd.docs-short {
-      color: #bbb;
-    }
-    dl#listFns > div.decl-entry {
-      border-color: #444;
-      background-color: #222;
-    }
-    #listFields > .field-entry {
-      border-bottom-color: #333;
-    }
-    .alias-info {
-      color: #aaa;
-    }
-  }
-</style>
 
 <script>
   import { codeToHtml } from "../../lib/codeToHtml";

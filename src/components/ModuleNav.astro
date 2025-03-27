@@ -1,20 +1,17 @@
 ---
 import Link from './Link.astro';
 
-// Expect a prop like "std" or "std.time.Instant"
 interface Props {
   currentPath: string;
 }
 
 const { currentPath } = Astro.props;
 
-// Split the path into parts for breadcrumbs
 const parts = currentPath?.split(".") || [];
 
-// Generate breadcrumb items
 const breadcrumbs = parts.map((part, index) => {
   const fqn = parts.slice(0, index + 1).join(".");
-  const path = fqn.replace(/\./g, "/"); // Convert FQN to URL path segment
+  const path = fqn.replace(/\./g, "/");
   return {
     name: part,
     href: `/modules/${path}`,
@@ -23,83 +20,27 @@ const breadcrumbs = parts.map((part, index) => {
 });
 ---
 
-<div id="sectNav">
-  <ul id="listNav">
-    <li><Link href="/">Modules</Link></li>
+<div class="mb-4">
+  <ul class="flex flex-wrap list-none m-0 mt-2 mb-4 p-0 overflow-hidden bg-gray-100 dark:bg-gray-800 rounded">
+    <li class="float-left">
+      <Link href="/" class="inline-block px-2 py-2 text-black dark:text-white no-underline hover:bg-gray-300 dark:hover:bg-gray-700 hover:rounded">Modules</Link>
+    </li>
     {
-      breadcrumbs.map((crumb) => (
-        <li>
-          <Link href={crumb.href} class:list={[crumb.isCurrent && "active"]}>
+      breadcrumbs.map((crumb, index) => (
+        <li class={`float-left ${index > 0 ? "before:content-['/'] before:px-1.5 before:text-gray-500 before:dark:text-gray-400 before:inline-block before:align-middle" : ""}`}>
+          <Link 
+            href={crumb.href} 
+            class:list={[
+              "inline-block px-2 py-2 no-underline align-middle",
+              crumb.isCurrent 
+                ? "bg-amber-400 text-black font-bold rounded" 
+                : "text-black dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700 hover:rounded"
+            ]}
+          >
             {crumb.name}
-          </Lin>
+          </Link>
         </li>
       ))
     }
   </ul>
 </div>
-
-<!-- Styles remain the same -->
-<style>
-  #listNav {
-    list-style-type: none;
-    margin: 0.5em 0 1em 0; /* Added bottom margin back */
-    padding: 0;
-    overflow: hidden;
-    background-color: #f1f1f1;
-    border-radius: 4px; /* Slight rounding */
-  }
-
-  #listNav li {
-    float: left;
-  }
-  /* Add separators using ::before on list items except the first two */
-  #listNav li:not(:first-child):not(:nth-child(2))::before {
-    content: "/";
-    padding: 0 0.4em; /* Adjust spacing */
-    color: #888;
-    display: inline-block; /* Needed for padding */
-    vertical-align: middle; /* Align with text */
-  }
-
-  #listNav li a {
-    display: inline-block; /* Change from block to allow separator */
-    color: #000;
-    text-align: center;
-    padding: 0.5em 0.2em; /* Adjust padding */
-    text-decoration: none;
-    vertical-align: middle;
-  }
-
-  #listNav li a:hover {
-    background-color: #ddd;
-    border-radius: 2px; /* Add slight rounding on hover */
-  }
-
-  #listNav li a.active {
-    background-color: #ffbb4d;
-    color: #000;
-    font-weight: bold;
-    border-radius: 2px;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    #listNav {
-      background-color: #333;
-    }
-    #listNav li:not(:first-child):not(:nth-child(2))::before {
-      color: #777;
-    }
-
-    #listNav li a {
-      color: #fff;
-    }
-    #listNav li a:hover {
-      background-color: #444;
-    }
-
-    #listNav li a.active {
-      background-color: #ffbb4d;
-      color: #000;
-    }
-  }
-</style>
